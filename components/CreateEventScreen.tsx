@@ -11,6 +11,7 @@ import {
   Image,
   Alert,
   Modal,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -34,7 +35,17 @@ import { DateTimePickerModal } from './DateTimePickerModal';
 import { LocationPickerModal } from './LocationPickerModal';
 import { EventDetailsModal } from './EventDetailsModal';
 import { BackgroundPickerModal } from './BackgroundPickerModal';
-import { TextStylePickerModal, TextStyle } from './TextStylePickerModal';
+import { ColorPicker } from './ColorPicker';
+// Local TextStyle interface without keyboard type
+interface TextStyle {
+  color: string;
+  fontSize: number;
+  fontFamily: string;
+  fontWeight: '400' | '500' | '600' | '700' | '800';
+  textAlign: 'left' | 'center' | 'right';
+  fontStyle: 'normal' | 'italic';
+  textDecorationLine: 'none' | 'underline' | 'line-through' | 'underline line-through';
+}
 import { useTheme } from '@/contexts/ThemeContext';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -104,6 +115,28 @@ interface EventData {
   titleStyle: TextStyle;
 }
 
+// Helper function to get display font size (capped for better UI)
+const getDisplayFontSize = (fontSize: number) => {
+  // Cap the display font size to prevent UI issues
+  return Math.min(fontSize, 28);
+};
+
+// Helper function to get proper font family for weight and style
+const getFontFamily = (baseFamily: string, fontWeight: string, fontStyle: string) => {
+  if (fontStyle === 'italic') {
+    // For italic, we need to use Inter-Italic variants
+    switch (fontWeight) {
+      case '400': return 'Inter-Italic';
+      case '500': return 'Inter-MediumItalic';
+      case '600': return 'Inter-SemiBoldItalic';
+      case '700': return 'Inter-BoldItalic';
+      case '800': return 'Inter-ExtraBoldItalic';
+      default: return 'Inter-Italic';
+    }
+  }
+  return baseFamily;
+};
+
 export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEventScreenProps) {
   const { theme, isDark } = useTheme();
   
@@ -118,14 +151,13 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
     hostName: 'Joshua Smith',
     backgroundImage: null,
     titleStyle: {
-      keyboardType: 'default',
-      color: '#FFFFFF',
+      color: isDark ? '#FFFFFF' : '#000000',
       fontSize: 20,
       fontFamily: 'Inter-Bold',
       fontWeight: '700',
-      isItalic: false,
-      isUnderlined: false,
-      isBold: false,
+      textAlign: 'center',
+      fontStyle: 'normal',
+      textDecorationLine: 'none',
     },
   });
 
@@ -134,7 +166,7 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showEventDetails, setShowEventDetails] = useState(false);
   const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
-  const [showTextStylePicker, setShowTextStylePicker] = useState(false);
+
   const [showTitleInput, setShowTitleInput] = useState(false);
 
   // Animation values
@@ -171,18 +203,17 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
         hostName: 'Joshua Smith',
         backgroundImage: null,
         titleStyle: {
-          keyboardType: 'default',
-          color: '#FFFFFF',
+          color: isDark ? '#FFFFFF' : '#000000',
           fontSize: 20,
           fontFamily: 'Inter-Bold',
           fontWeight: '700',
-          isItalic: false,
-          isUnderlined: false,
-          isBold: false,
+          textAlign: 'center',
+          fontStyle: 'normal',
+          textDecorationLine: 'none',
         },
       });
     }
-  }, [visible]);
+  }, [visible, isDark]);
 
   // Animated styles
   const headerAnimatedStyle = useAnimatedStyle(() => ({
@@ -215,16 +246,10 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
     setShowTitleInput(true);
   };
 
-  const handleTitleStylePress = () => {
-    setShowTextStylePicker(true);
-  };
-
   const handleTitleSave = (title: string) => {
     setEventData(prev => ({ ...prev, title }));
     setShowTitleInput(false);
   };
-
-
 
   const handleDateSelect = (date: Date, time?: Date) => {
     setEventData(prev => ({
@@ -261,13 +286,7 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
     setShowBackgroundPicker(false);
   };
 
-  const handleTextStyleSelect = (textStyle: TextStyle) => {
-    setEventData(prev => ({
-      ...prev,
-      titleStyle: textStyle,
-    }));
-    setShowTextStylePicker(false);
-  };
+
 
   const formatDateTime = () => {
     if (!eventData.date) return 'Date and Time';
@@ -344,14 +363,13 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
       hostName: "Joshua Smith",
       backgroundImage: null,
       titleStyle: {
-        keyboardType: 'default',
-        color: '#FFFFFF',
+        color: isDark ? '#FFFFFF' : '#000000',
         fontSize: 20,
         fontFamily: 'Inter-Bold',
         fontWeight: '700',
-        isItalic: false,
-        isUnderlined: false,
-        isBold: false,
+        textAlign: 'center',
+        fontStyle: 'normal',
+        textDecorationLine: 'none',
       },
     });
     
@@ -413,7 +431,7 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
               {/* Semi-transparent overlay to ensure content readability */}
               <View style={[
                 styles.backgroundOverlay, 
-                { backgroundColor: isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.3)' }
+                { backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.2)' }
               ]} />
             </>
           ) : (
@@ -421,7 +439,7 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
             <LinearGradient
               colors={isDark 
                 ? [theme.background, theme.surface, theme.background]
-                : [theme.surface, theme.background, theme.surface]
+                : [theme.background, theme.surface, theme.background]
               }
               style={styles.gradientBackground}
               start={{ x: 0, y: 0 }}
@@ -488,9 +506,16 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
                   styles.titleText,
                   {
                     color: eventData.title ? eventData.titleStyle.color : theme.textSecondary,
-                    fontSize: moderateScale(eventData.titleStyle.fontSize),
-                    fontFamily: eventData.titleStyle.fontFamily,
+                    fontSize: moderateScale(getDisplayFontSize(eventData.titleStyle.fontSize)),
+                    fontFamily: getFontFamily(
+                      eventData.titleStyle.fontFamily, 
+                      eventData.titleStyle.fontWeight, 
+                      eventData.titleStyle.fontStyle
+                    ),
                     fontWeight: eventData.titleStyle.fontWeight,
+                    textAlign: eventData.titleStyle.textAlign,
+                    fontStyle: eventData.titleStyle.fontStyle,
+                    textDecorationLine: eventData.titleStyle.textDecorationLine,
                   }
                 ]} numberOfLines={2}>
                   {eventData.title || 'Event Title *'}
@@ -619,15 +644,15 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
                 
                 <View style={styles.modalHeaderCenter}>
                   <Text style={[styles.modalHeaderTitle, { color: theme.text }]}>
-                    Event Title
+                    Event Title & Style
                   </Text>
                 </View>
                 
                 <TouchableOpacity 
-                  onPress={handleTitleStylePress}
+                  onPress={() => setShowTitleInput(false)}
                   style={[styles.styleButton, { backgroundColor: theme.primary }]}
                 >
-                  <Text style={styles.styleButtonText}>Style</Text>
+                  <Text style={styles.styleButtonText}>Done</Text>
                 </TouchableOpacity>
               </View>
 
@@ -638,9 +663,16 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
                     styles.titleInputField,
                     {
                       color: eventData.titleStyle.color,
-                      fontSize: moderateScale(eventData.titleStyle.fontSize),
-                      fontFamily: eventData.titleStyle.fontFamily,
+                      fontSize: moderateScale(Math.min(eventData.titleStyle.fontSize, 24)),
+                      fontFamily: getFontFamily(
+                        eventData.titleStyle.fontFamily, 
+                        eventData.titleStyle.fontWeight, 
+                        eventData.titleStyle.fontStyle
+                      ),
                       fontWeight: eventData.titleStyle.fontWeight,
+                      textAlign: eventData.titleStyle.textAlign,
+                      fontStyle: eventData.titleStyle.fontStyle,
+                      textDecorationLine: eventData.titleStyle.textDecorationLine,
                       borderColor: theme.border,
                     }
                   ]}
@@ -651,7 +683,7 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
                   maxLength={50}
                   multiline
                   autoFocus
-                  keyboardType={eventData.titleStyle.keyboardType}
+                  keyboardType="default"
                   returnKeyType="done"
                   onSubmitEditing={() => setShowTitleInput(false)}
                 />
@@ -665,14 +697,273 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
                     styles.titlePreviewText,
                     {
                       color: eventData.titleStyle.color,
-                      fontSize: moderateScale(Math.min(eventData.titleStyle.fontSize, 24)),
-                      fontFamily: eventData.titleStyle.fontFamily,
+                      fontSize: moderateScale(Math.min(eventData.titleStyle.fontSize, 20)),
+                      fontFamily: getFontFamily(
+                        eventData.titleStyle.fontFamily, 
+                        eventData.titleStyle.fontWeight, 
+                        eventData.titleStyle.fontStyle
+                      ),
                       fontWeight: eventData.titleStyle.fontWeight,
+                      textAlign: eventData.titleStyle.textAlign,
+                      fontStyle: eventData.titleStyle.fontStyle,
+                      textDecorationLine: eventData.titleStyle.textDecorationLine,
                     }
                   ]} numberOfLines={2}>
                     {eventData.title || 'Event Title Preview'}
                   </Text>
                 </View>
+
+                {/* Text Styling Controls */}
+                <ScrollView style={styles.stylingContainer} showsVerticalScrollIndicator={false}>
+                  
+                  {/* Quick Format Toggles */}
+                  <View style={[styles.quickFormatSection, { backgroundColor: theme.surface }]}>
+                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                      Quick Format
+                    </Text>
+                    <View style={styles.quickFormatRow}>
+                      <TouchableOpacity
+                        style={[
+                          styles.formatToggle,
+                          {
+                            backgroundColor: eventData.titleStyle.fontWeight === '700' 
+                              ? theme.primary : theme.background,
+                            borderColor: theme.border,
+                          }
+                        ]}
+                        onPress={() => setEventData(prev => ({
+                          ...prev,
+                          titleStyle: {
+                            ...prev.titleStyle,
+                            fontWeight: prev.titleStyle.fontWeight === '700' ? '400' : '700',
+                            fontFamily: prev.titleStyle.fontWeight === '700' ? 'Inter-Regular' : 'Inter-Bold'
+                          }
+                        }))}
+                      >
+                        <Text style={[
+                          styles.formatToggleText,
+                          {
+                            color: eventData.titleStyle.fontWeight === '700' ? '#FFFFFF' : theme.text,
+                            fontWeight: '700'
+                          }
+                        ]}>B</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.formatToggle,
+                          {
+                            backgroundColor: eventData.titleStyle.fontStyle === 'italic' 
+                              ? theme.primary : theme.background,
+                            borderColor: theme.border,
+                          }
+                        ]}
+                        onPress={() => setEventData(prev => ({
+                          ...prev,
+                          titleStyle: {
+                            ...prev.titleStyle,
+                            fontStyle: prev.titleStyle.fontStyle === 'italic' ? 'normal' : 'italic',
+                            fontFamily: prev.titleStyle.fontStyle === 'italic' 
+                              ? prev.titleStyle.fontFamily.replace('Italic', '').replace('Italic', '') || 'Inter-Regular'
+                              : getFontFamily(prev.titleStyle.fontFamily, prev.titleStyle.fontWeight, 'italic')
+                          }
+                        }))}
+                      >
+                        <Text style={[
+                          styles.formatToggleText,
+                          {
+                            color: eventData.titleStyle.fontStyle === 'italic' ? '#FFFFFF' : theme.text,
+                            fontStyle: 'italic'
+                          }
+                        ]}>I</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.formatToggle,
+                          {
+                            backgroundColor: eventData.titleStyle.textDecorationLine.includes('underline') 
+                              ? theme.primary : theme.background,
+                            borderColor: theme.border,
+                          }
+                        ]}
+                        onPress={() => setEventData(prev => ({
+                          ...prev,
+                          titleStyle: {
+                            ...prev.titleStyle,
+                            textDecorationLine: prev.titleStyle.textDecorationLine.includes('underline') ? 'none' : 'underline'
+                          }
+                        }))}
+                      >
+                        <Text style={[
+                          styles.formatToggleText,
+                          {
+                            color: eventData.titleStyle.textDecorationLine.includes('underline') ? '#FFFFFF' : theme.text,
+                            textDecorationLine: 'underline'
+                          }
+                        ]}>U</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Text Alignment */}
+                  <View style={[styles.alignmentSection, { backgroundColor: theme.surface }]}>
+                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                      Text Alignment
+                    </Text>
+                    <View style={styles.alignmentRow}>
+                      {(['left', 'center', 'right'] as const).map((alignment) => (
+                        <TouchableOpacity
+                          key={alignment}
+                          style={[
+                            styles.alignmentButton,
+                            {
+                              backgroundColor: eventData.titleStyle.textAlign === alignment 
+                                ? theme.primary : theme.background,
+                              borderColor: theme.border,
+                            }
+                          ]}
+                          onPress={() => setEventData(prev => ({
+                            ...prev,
+                            titleStyle: {
+                              ...prev.titleStyle,
+                              textAlign: alignment
+                            }
+                          }))}
+                        >
+                          <Text style={[
+                            styles.alignmentButtonText,
+                            {
+                              color: eventData.titleStyle.textAlign === alignment ? '#FFFFFF' : theme.text,
+                              textAlign: alignment
+                            }
+                          ]}>
+                            {alignment === 'left' ? '⟸' : alignment === 'center' ? '⟷' : '⟹'}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  {/* Font Size */}
+                  <View style={[styles.fontSizeSection, { backgroundColor: theme.surface }]}>
+                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                      Font Size
+                    </Text>
+                    <View style={styles.fontSizeController}>
+                      <TouchableOpacity
+                        style={[styles.fontSizeArrow, { backgroundColor: theme.background, borderColor: theme.border }]}
+                        onPress={() => setEventData(prev => ({
+                          ...prev,
+                          titleStyle: {
+                            ...prev.titleStyle,
+                            fontSize: Math.max(8, prev.titleStyle.fontSize - 1)
+                          }
+                        }))}
+                        disabled={eventData.titleStyle.fontSize <= 8}
+                      >
+                        <Text style={[styles.fontSizeArrowText, { 
+                          color: eventData.titleStyle.fontSize <= 8 ? theme.textSecondary : theme.text 
+                        }]}>−</Text>
+                      </TouchableOpacity>
+                      
+                      <View style={[styles.fontSizeDisplay, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                        <Text style={[styles.fontSizeDisplayText, { color: theme.text }]}>
+                          {eventData.titleStyle.fontSize}
+                        </Text>
+                      </View>
+                      
+                      <TouchableOpacity
+                        style={[styles.fontSizeArrow, { backgroundColor: theme.background, borderColor: theme.border }]}
+                        onPress={() => setEventData(prev => ({
+                          ...prev,
+                          titleStyle: {
+                            ...prev.titleStyle,
+                            fontSize: Math.min(25, prev.titleStyle.fontSize + 1)
+                          }
+                        }))}
+                        disabled={eventData.titleStyle.fontSize >= 25}
+                      >
+                        <Text style={[styles.fontSizeArrowText, { 
+                          color: eventData.titleStyle.fontSize >= 25 ? theme.textSecondary : theme.text 
+                        }]}>+</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <Text style={[styles.fontSizeHelper, { color: theme.textSecondary }]}>
+                      Display is optimized for readability
+                    </Text>
+                  </View>
+
+                  {/* Font Weight */}
+                  <View style={[styles.fontWeightSection, { backgroundColor: theme.surface }]}>
+                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                      Font Weight
+                    </Text>
+                    <View style={styles.fontWeightOptions}>
+                      {[
+                        { weight: '400', label: 'Regular', family: 'Inter-Regular' },
+                        { weight: '500', label: 'Medium', family: 'Inter-Medium' },
+                        { weight: '600', label: 'SemiBold', family: 'Inter-SemiBold' },
+                        { weight: '700', label: 'Bold', family: 'Inter-Bold' },
+                        { weight: '800', label: 'ExtraBold', family: 'Inter-ExtraBold' }
+                      ].map(({ weight, label, family }) => (
+                        <TouchableOpacity
+                          key={weight}
+                          style={[
+                            styles.fontWeightOption,
+                            {
+                              backgroundColor: eventData.titleStyle.fontWeight === weight 
+                                ? theme.primary : theme.background,
+                              borderColor: theme.border,
+                            }
+                          ]}
+                          onPress={() => setEventData(prev => ({
+                            ...prev,
+                            titleStyle: {
+                              ...prev.titleStyle,
+                              fontWeight: weight as '400' | '500' | '600' | '700' | '800',
+                              fontFamily: family
+                            }
+                          }))}
+                        >
+                          <Text style={[
+                            styles.fontWeightOptionText,
+                            {
+                              color: eventData.titleStyle.fontWeight === weight ? '#FFFFFF' : theme.text,
+                              fontFamily: family
+                            }
+                          ]}>
+                            {label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  {/* Advanced Color Picker */}
+                  <View style={[styles.colorSection, { backgroundColor: theme.surface }]}>
+                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                      Text Color
+                    </Text>
+                    
+                    <View style={styles.colorPickerContainer}>
+                      <ColorPicker
+                        initialColor={eventData.titleStyle.color}
+                        onColorChange={(color) => setEventData(prev => ({
+                          ...prev,
+                          titleStyle: {
+                            ...prev.titleStyle,
+                            color: color
+                          }
+                        }))}
+                        style={styles.colorPickerStyle}
+                      />
+                    </View>
+                  </View>
+
+
+
+                </ScrollView>
               </View>
             </SafeAreaView>
           </View>
@@ -710,12 +1001,7 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
           currentBackground={eventData.backgroundImage}
         />
 
-        <TextStylePickerModal
-          visible={showTextStylePicker}
-          onClose={() => setShowTextStylePicker(false)}
-          onApply={handleTextStyleSelect}
-          currentStyle={eventData.titleStyle}
-        />
+
       </View>
     </Modal>
   );
@@ -1056,5 +1342,152 @@ const styles = StyleSheet.create({
   titlePreviewText: {
     textAlign: 'center',
     lineHeight: getResponsiveSize(24, 28, 32, 36, 40),
+  },
+
+  // Text Styling Components - Responsive
+  stylingContainer: {
+    flex: 1,
+    marginTop: getResponsiveSpacing(20),
+  },
+  
+  // Section Styles
+  sectionTitle: {
+    fontSize: getResponsiveSize(14, 15, 16, 17, 18),
+    fontWeight: '600',
+    marginBottom: getResponsiveSpacing(12),
+  },
+
+  // Quick Format Section
+  quickFormatSection: {
+    marginHorizontal: getResponsiveSpacing(20),
+    borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
+    padding: getResponsiveSpacing(16),
+    marginBottom: getResponsiveSpacing(16),
+  },
+  quickFormatRow: {
+    flexDirection: 'row',
+    gap: getResponsiveSpacing(12),
+    justifyContent: 'center',
+  },
+  formatToggle: {
+    width: getResponsiveSize(40, 44, 48, 52, 56),
+    height: getResponsiveSize(40, 44, 48, 52, 56),
+    borderRadius: getResponsiveSize(8, 9, 10, 11, 12),
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  formatToggleText: {
+    fontSize: getResponsiveSize(16, 17, 18, 19, 20),
+    fontWeight: '600',
+  },
+
+  // Alignment Section
+  alignmentSection: {
+    marginHorizontal: getResponsiveSpacing(20),
+    borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
+    padding: getResponsiveSpacing(16),
+    marginBottom: getResponsiveSpacing(16),
+  },
+  alignmentRow: {
+    flexDirection: 'row',
+    gap: getResponsiveSpacing(12),
+    justifyContent: 'center',
+  },
+  alignmentButton: {
+    flex: 1,
+    height: getResponsiveSize(40, 44, 48, 52, 56),
+    borderRadius: getResponsiveSize(8, 9, 10, 11, 12),
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  alignmentButtonText: {
+    fontSize: getResponsiveSize(16, 17, 18, 19, 20),
+    fontWeight: '600',
+  },
+
+  // Font Size Section
+  fontSizeSection: {
+    marginHorizontal: getResponsiveSpacing(20),
+    borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
+    padding: getResponsiveSpacing(16),
+    marginBottom: getResponsiveSpacing(16),
+  },
+  fontSizeController: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: getResponsiveSpacing(12),
+  },
+  fontSizeArrow: {
+    width: getResponsiveSize(36, 40, 44, 48, 52),
+    height: getResponsiveSize(36, 40, 44, 48, 52),
+    borderRadius: getResponsiveSize(8, 9, 10, 11, 12),
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fontSizeArrowText: {
+    fontSize: getResponsiveSize(18, 20, 22, 24, 26),
+    fontWeight: '600',
+  },
+  fontSizeDisplay: {
+    minWidth: getResponsiveSize(60, 70, 80, 90, 100),
+    height: getResponsiveSize(36, 40, 44, 48, 52),
+    borderRadius: getResponsiveSize(8, 9, 10, 11, 12),
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fontSizeDisplayText: {
+    fontSize: getResponsiveSize(16, 17, 18, 19, 20),
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+
+  // Font Weight Section
+  fontWeightSection: {
+    marginHorizontal: getResponsiveSpacing(20),
+    borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
+    padding: getResponsiveSpacing(16),
+    marginBottom: getResponsiveSpacing(16),
+  },
+  fontWeightOptions: {
+    gap: getResponsiveSpacing(8),
+  },
+  fontWeightOption: {
+    paddingHorizontal: getResponsiveSpacing(16),
+    paddingVertical: getResponsiveSpacing(12),
+    borderRadius: getResponsiveSize(8, 9, 10, 11, 12),
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  fontWeightOptionText: {
+    fontSize: getResponsiveSize(14, 15, 16, 17, 18),
+  },
+
+  // Color Section
+  colorSection: {
+    marginHorizontal: getResponsiveSpacing(20),
+    borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
+    padding: getResponsiveSpacing(16),
+    marginBottom: getResponsiveSpacing(16),
+  },
+  colorPickerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: getResponsiveSpacing(8),
+  },
+  colorPickerStyle: {
+    width: '100%',
+    maxWidth: Math.min(SCREEN_WIDTH - getResponsiveSpacing(80), scale(320)),
+  },
+
+  // Font Size Helper Text
+  fontSizeHelper: {
+    fontSize: getResponsiveSize(11, 12, 13, 14, 15),
+    textAlign: 'center',
+    marginTop: getResponsiveSpacing(8),
   },
 }); 

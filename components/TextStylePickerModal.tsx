@@ -9,10 +9,9 @@ import {
   Platform,
   Dimensions,
   StatusBar,
-  TextInput,
+  PanResponder,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -34,10 +33,11 @@ import {
   Bold,
   Italic,
   Underline,
-  Sliders,
-  Paintbrush,
-  Eye,
-  Plus
+  Minus,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Droplet
 } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -65,15 +65,16 @@ const moderateScale = (size: number, factor: number = 0.3): number => {
 // Enhanced device detection and responsive spacing
 const getDeviceCategory = () => {
   const aspectRatio = SCREEN_HEIGHT / SCREEN_WIDTH;
-  if (SCREEN_WIDTH <= 320) return 'extraSmall';
-  if (SCREEN_WIDTH <= 375) return 'small';
-  if (SCREEN_WIDTH <= 414) return 'medium';
-  if (SCREEN_WIDTH <= 428) return 'large';
-  return 'extraLarge';
+  if (SCREEN_WIDTH <= 320) return 'extraSmall'; // iPhone SE 1st gen
+  if (SCREEN_WIDTH <= 375) return 'small';      // iPhone 6/7/8, SE 2nd gen
+  if (SCREEN_WIDTH <= 414) return 'medium';     // iPhone 6+/7+/8+ Plus, XR, 11
+  if (SCREEN_WIDTH <= 428) return 'large';      // iPhone 12/13/14 Pro Max, 15 Plus
+  return 'extraLarge'; // iPad and larger devices
 };
 
 const deviceCategory = getDeviceCategory();
 
+// Responsive spacing function for consistent padding/margins
 const getResponsiveSpacing = (base: number) => {
   const multipliers = {
     extraSmall: 0.75,
@@ -125,7 +126,7 @@ const KEYBOARD_OPTIONS: KeyboardOption[] = [
   },
 ];
 
-// Predefined text colors
+// Text colors
 interface ColorOption {
   id: string;
   name: string;
@@ -164,6 +165,22 @@ const TEXT_COLORS: ColorOption[] = [
   { id: 'mint', name: 'Mint', color: '#98FB98', category: 'pastel' },
 ];
 
+// Font sizes
+interface FontSizeOption {
+  id: string;
+  name: string;
+  size: number;
+  description: string;
+}
+
+const FONT_SIZES: FontSizeOption[] = [
+  { id: 'small', name: 'Small', size: 16, description: 'Compact text' },
+  { id: 'medium', name: 'Medium', size: 20, description: 'Standard size' },
+  { id: 'large', name: 'Large', size: 24, description: 'Prominent text' },
+  { id: 'extraLarge', name: 'Extra Large', size: 28, description: 'Bold statement' },
+  { id: 'huge', name: 'Huge', size: 32, description: 'Maximum impact' },
+];
+
 // Font families
 interface FontFamilyOption {
   id: string;
@@ -181,16 +198,16 @@ const FONT_FAMILIES: FontFamilyOption[] = [
   { id: 'extraBold', name: 'Extra Bold', family: 'Inter-ExtraBold', weight: '800', description: 'Maximum boldness' },
 ];
 
-// Text style interface with comprehensive formatting options
+// Text style interface
 export interface TextStyle {
   keyboardType: 'default' | 'email-address' | 'numeric' | 'phone-pad' | 'url' | 'web-search';
   color: string;
   fontSize: number;
   fontFamily: string;
   fontWeight: '400' | '500' | '600' | '700' | '800';
-  isItalic: boolean;
-  isUnderlined: boolean;
-  isBold: boolean;
+  textAlign: 'left' | 'center' | 'right';
+  fontStyle: 'normal' | 'italic';
+  textDecorationLine: 'none' | 'underline' | 'line-through' | 'underline line-through';
 }
 
 // Props interface
@@ -201,67 +218,6 @@ interface TextStylePickerModalProps {
   currentStyle: TextStyle;
 }
 
-// Custom Slider Component
-const CustomSlider = ({ 
-  value, 
-  minimumValue, 
-  maximumValue, 
-  onValueChange, 
-  style, 
-  theme 
-}: {
-  value: number;
-  minimumValue: number;
-  maximumValue: number;
-  onValueChange: (value: number) => void;
-  style?: any;
-  theme: any;
-}) => {
-  const sliderWidth = scale(250);
-  const thumbSize = scale(20);
-  
-  const progress = (value - minimumValue) / (maximumValue - minimumValue);
-  const thumbPosition = progress * (sliderWidth - thumbSize);
-  
-  const handleTouch = (event: any) => {
-    const { locationX } = event.nativeEvent;
-    const newProgress = Math.max(0, Math.min(1, locationX / sliderWidth));
-    const newValue = minimumValue + newProgress * (maximumValue - minimumValue);
-    onValueChange(Math.round(newValue));
-  };
-  
-  return (
-    <View style={[styles.sliderContainer, style]}>
-      <View 
-        style={[styles.sliderTrack, { backgroundColor: theme.border }]}
-        onTouchStart={handleTouch}
-      >
-        <View 
-          style={[
-            styles.sliderActive, 
-            { 
-              width: thumbPosition + thumbSize / 2,
-              backgroundColor: theme.primary 
-            }
-          ]} 
-        />
-        <View 
-          style={[
-            styles.sliderThumb, 
-            { 
-              left: thumbPosition,
-              backgroundColor: theme.primary 
-            }
-          ]} 
-        />
-      </View>
-      <Text style={[styles.sliderValue, { color: theme.textSecondary }]}>
-        {value}px
-      </Text>
-    </View>
-  );
-};
-
 export function TextStylePickerModal({
   visible,
   onClose,
@@ -270,34 +226,21 @@ export function TextStylePickerModal({
 }: TextStylePickerModalProps) {
   const { theme } = useTheme();
 
-  // State management with comprehensive formatting options
-  const [selectedKeyboard, setSelectedKeyboard] = useState<string>(() => {
-    const keyboard = KEYBOARD_OPTIONS.find(k => k.type === currentStyle.keyboardType);
-    return keyboard?.id || 'default';
+  // State management with enhanced options
+  const [selectedStyle, setSelectedStyle] = useState<TextStyle>({
+    keyboardType: currentStyle.keyboardType || 'default',
+    color: currentStyle.color || '#FFFFFF',
+    fontSize: currentStyle.fontSize || 24,
+    fontFamily: currentStyle.fontFamily || 'Inter',
+    fontWeight: currentStyle.fontWeight || '600',
+    textAlign: currentStyle.textAlign || 'center',
+    fontStyle: currentStyle.fontStyle || 'normal',
+    textDecorationLine: currentStyle.textDecorationLine || 'none',
   });
-  
-  const [selectedColor, setSelectedColor] = useState<string>(() => {
-    const color = TEXT_COLORS.find(c => c.color === currentStyle.color);
-    return color?.id || 'white';
-  });
-  
-  const [customColor, setCustomColor] = useState<string>(currentStyle.color);
-  const [useCustomColor, setUseCustomColor] = useState<boolean>(() => {
-    return !TEXT_COLORS.find(c => c.color === currentStyle.color);
-  });
-  
-  const [fontSize, setFontSize] = useState<number>(currentStyle.fontSize);
-  
-  const [selectedFontFamily, setSelectedFontFamily] = useState<string>(() => {
-    const fontFamily = FONT_FAMILIES.find(f => f.family === currentStyle.fontFamily);
-    return fontFamily?.id || 'bold';
-  });
-  
-  const [isBold, setIsBold] = useState<boolean>(currentStyle.isBold);
-  const [isItalic, setIsItalic] = useState<boolean>(currentStyle.isItalic);
-  const [isUnderlined, setIsUnderlined] = useState<boolean>(currentStyle.isUnderlined);
-  
-  const [activeTab, setActiveTab] = useState<'colors' | 'typography' | 'format'>('colors');
+
+  const [activeSection, setActiveSection] = useState<'keyboard' | 'color' | 'size' | 'font' | 'format'>('color');
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [customColor, setCustomColor] = useState(currentStyle.color || '#FFFFFF');
 
   // Animation values
   const headerOpacity = useSharedValue(0);
@@ -322,25 +265,8 @@ export function TextStylePickerModal({
       buttonScale.value = withSpring(1, { duration: 200 });
     }, 100);
 
-    const keyboardOption = KEYBOARD_OPTIONS.find(k => k.id === selectedKeyboard);
-    const colorOption = TEXT_COLORS.find(c => c.id === selectedColor);
-    const fontFamilyOption = FONT_FAMILIES.find(f => f.id === selectedFontFamily);
-
-    const finalColor = useCustomColor ? customColor : (colorOption?.color || '#FFFFFF');
-
-    const newTextStyle: TextStyle = {
-      keyboardType: keyboardOption?.type || 'default',
-      color: finalColor,
-      fontSize: fontSize,
-      fontFamily: fontFamilyOption?.family || 'Inter-Bold',
-      fontWeight: fontFamilyOption?.weight || '700',
-      isItalic: isItalic,
-      isUnderlined: isUnderlined,
-      isBold: isBold,
-    };
-
-    onApply(newTextStyle);
-  }, [selectedKeyboard, selectedColor, customColor, useCustomColor, fontSize, selectedFontFamily, isBold, isItalic, isUnderlined, onApply, buttonScale]);
+    onApply(selectedStyle);
+  }, [selectedStyle, onApply, buttonScale]);
 
   // Animated styles
   const headerAnimatedStyle = useAnimatedStyle(() => ({
@@ -357,23 +283,15 @@ export function TextStylePickerModal({
 
   // Get preview style
   const getPreviewStyle = () => {
-    const colorOption = TEXT_COLORS.find(c => c.id === selectedColor);
-    const fontFamilyOption = FONT_FAMILIES.find(f => f.id === selectedFontFamily);
-    const finalColor = useCustomColor ? customColor : (colorOption?.color || '#FFFFFF');
-
     return {
-      color: finalColor,
-      fontSize: moderateScale(Math.min(fontSize, 28)), // Cap preview size
-      fontFamily: fontFamilyOption?.family || 'Inter-Bold',
-      fontWeight: isBold ? '700' as const : (fontFamilyOption?.weight || '700'),
-      fontStyle: isItalic ? 'italic' as const : 'normal' as const,
-      textDecorationLine: isUnderlined ? 'underline' as const : 'none' as const,
+      color: selectedStyle.color,
+      fontSize: moderateScale(Math.min(selectedStyle.fontSize, 24)), // Cap preview size
+      fontFamily: selectedStyle.fontFamily,
+      fontWeight: selectedStyle.fontWeight,
+      textAlign: selectedStyle.textAlign,
+      fontStyle: selectedStyle.fontStyle,
+      textDecorationLine: selectedStyle.textDecorationLine,
     };
-  };
-
-  // Validate hex color
-  const isValidHexColor = (color: string) => {
-    return /^#([0-9A-F]{3}){1,2}$/i.test(color);
   };
 
   if (!visible) {
@@ -425,262 +343,551 @@ export function TextStylePickerModal({
 
           {/* Content */}
           <Animated.View style={[styles.content, contentAnimatedStyle]}>
-            {/* Preview */}
-            <View style={[styles.previewContainer, { backgroundColor: theme.surface }]}>
-              <Text style={[styles.previewLabel, { color: theme.textSecondary }]}>
-                <Eye size={scale(14)} color={theme.textSecondary} />  Preview
-              </Text>
-              <View style={[styles.previewBox, { backgroundColor: theme.background }]}>
-                <Text style={[styles.previewText, getPreviewStyle()]} numberOfLines={1}>
-                  Event Title Sample
-                </Text>
-              </View>
-            </View>
-
-            {/* Tabs */}
-            <View style={styles.tabContainer}>
-              {[
-                { id: 'colors', label: 'Colors', icon: Palette },
-                { id: 'typography', label: 'Typography', icon: Type },
-                { id: 'format', label: 'Format', icon: Bold },
-              ].map((tab) => (
-                <TouchableOpacity
-                  key={tab.id}
-                  style={[
-                    styles.tab,
-                    {
-                      backgroundColor: activeTab === tab.id ? theme.primary : theme.surface,
-                    }
-                  ]}
-                  onPress={() => setActiveTab(tab.id as any)}
-                >
-                  <tab.icon 
-                    size={scale(16)} 
-                    color={activeTab === tab.id ? '#FFFFFF' : theme.textSecondary} 
-                  />
-                  <Text style={[
-                    styles.tabText,
-                    {
-                      color: activeTab === tab.id ? '#FFFFFF' : theme.textSecondary,
-                      fontFamily: activeTab === tab.id ? 'Inter-SemiBold' : 'Inter-Medium',
-                    }
-                  ]}>
-                    {tab.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
             <ScrollView 
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scrollContent}
             >
-              {/* Colors Tab */}
-              {activeTab === 'colors' && (
-                <View style={styles.section}>
-                  {/* Predefined Colors */}
-                  <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                    Predefined Colors
+              {/* Preview */}
+              <View style={[styles.previewContainer, { backgroundColor: theme.surface }]}>
+                <Text style={[styles.previewLabel, { color: theme.textSecondary }]}>
+                  Preview
+                </Text>
+                <View style={[styles.previewBox, { backgroundColor: theme.background }]}>
+                  <Text style={[styles.previewText, getPreviewStyle()]} numberOfLines={2}>
+                    Event Title Sample Text
                   </Text>
-                  <View style={styles.colorGrid}>
-                    {TEXT_COLORS.map((color) => (
+                </View>
+              </View>
+
+              {/* Quick Format Toggles */}
+              <View style={[styles.quickFormatContainer, { backgroundColor: theme.surface }]}>
+                <Text style={[styles.quickFormatLabel, { color: theme.textSecondary }]}>
+                  Quick Format
+                </Text>
+                <View style={styles.formatToggles}>
+                  {/* Bold Toggle */}
+                  <TouchableOpacity
+                    style={[
+                      styles.formatToggle,
+                      {
+                        backgroundColor: ['700', '800'].includes(selectedStyle.fontWeight) ? theme.primary : theme.border + '40',
+                        borderColor: ['700', '800'].includes(selectedStyle.fontWeight) ? theme.primary : theme.border,
+                      }
+                    ]}
+                    onPress={() => setSelectedStyle(prev => ({
+                      ...prev,
+                      fontWeight: ['700', '800'].includes(prev.fontWeight) ? '400' : '700'
+                    }))}
+                  >
+                    <Bold 
+                      size={scale(16)} 
+                      color={['700', '800'].includes(selectedStyle.fontWeight) ? '#FFFFFF' : theme.text} 
+                      strokeWidth={2.5}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Italic Toggle */}
+                  <TouchableOpacity
+                    style={[
+                      styles.formatToggle,
+                      {
+                        backgroundColor: selectedStyle.fontStyle === 'italic' ? theme.primary : theme.border + '40',
+                        borderColor: selectedStyle.fontStyle === 'italic' ? theme.primary : theme.border,
+                      }
+                    ]}
+                    onPress={() => setSelectedStyle(prev => ({
+                      ...prev,
+                      fontStyle: prev.fontStyle === 'italic' ? 'normal' : 'italic'
+                    }))}
+                  >
+                    <Italic 
+                      size={scale(16)} 
+                      color={selectedStyle.fontStyle === 'italic' ? '#FFFFFF' : theme.text}
+                      strokeWidth={2}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Underline Toggle */}
+                  <TouchableOpacity
+                    style={[
+                      styles.formatToggle,
+                      {
+                        backgroundColor: selectedStyle.textDecorationLine.includes('underline') ? theme.primary : theme.border + '40',
+                        borderColor: selectedStyle.textDecorationLine.includes('underline') ? theme.primary : theme.border,
+                      }
+                    ]}
+                    onPress={() => setSelectedStyle(prev => ({
+                      ...prev,
+                      textDecorationLine: prev.textDecorationLine.includes('underline') ? 'none' : 'underline'
+                    }))}
+                  >
+                    <Underline 
+                      size={scale(16)} 
+                      color={selectedStyle.textDecorationLine.includes('underline') ? '#FFFFFF' : theme.text}
+                      strokeWidth={2}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Alignment Toggles */}
+                  <View style={styles.alignmentGroup}>
+                    {[
+                      { align: 'left', icon: AlignLeft },
+                      { align: 'center', icon: AlignCenter },
+                      { align: 'right', icon: AlignRight }
+                    ].map(({ align, icon: Icon }) => (
                       <TouchableOpacity
-                        key={color.id}
+                        key={align}
                         style={[
-                          styles.colorOption,
+                          styles.formatToggle,
                           {
-                            backgroundColor: color.color,
-                            borderColor: selectedColor === color.id && !useCustomColor ? theme.primary : 'transparent',
-                            borderWidth: selectedColor === color.id && !useCustomColor ? 3 : 1,
+                            backgroundColor: selectedStyle.textAlign === align ? theme.primary : theme.border + '40',
+                            borderColor: selectedStyle.textAlign === align ? theme.primary : theme.border,
                           }
                         ]}
-                        onPress={() => {
-                          setSelectedColor(color.id);
-                          setUseCustomColor(false);
-                        }}
+                        onPress={() => setSelectedStyle(prev => ({
+                          ...prev,
+                          textAlign: align as 'left' | 'center' | 'right'
+                        }))}
                       >
-                        {selectedColor === color.id && !useCustomColor && (
-                          <Check size={scale(16)} color={color.color === '#FFFFFF' ? '#000000' : '#FFFFFF'} />
-                        )}
+                        <Icon 
+                          size={scale(16)} 
+                          color={selectedStyle.textAlign === align ? '#FFFFFF' : theme.text}
+                          strokeWidth={2}
+                        />
                       </TouchableOpacity>
                     ))}
                   </View>
+                </View>
+              </View>
 
-                  {/* Custom Color */}
-                  <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                    Custom Color
-                  </Text>
-                  <View style={styles.customColorContainer}>
+              {/* Keyboard Type */}
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                  Keyboard Type
+                </Text>
+                <View style={styles.optionsGrid}>
+                  {KEYBOARD_OPTIONS.map((keyboard) => (
                     <TouchableOpacity
+                      key={keyboard.id}
                       style={[
-                        styles.customColorPreview,
-                        {
-                          backgroundColor: isValidHexColor(customColor) ? customColor : theme.surface,
-                          borderColor: useCustomColor ? theme.primary : theme.border,
-                          borderWidth: useCustomColor ? 3 : 1,
-                        }
-                      ]}
-                      onPress={() => setUseCustomColor(true)}
-                    >
-                      {useCustomColor && (
-                        <Check size={scale(16)} color={customColor === '#FFFFFF' ? '#000000' : '#FFFFFF'} />
-                      )}
-                    </TouchableOpacity>
-                    <TextInput
-                      style={[
-                        styles.customColorInput,
+                        styles.optionItem,
                         {
                           backgroundColor: theme.surface,
-                          color: theme.text,
-                          borderColor: useCustomColor ? theme.primary : theme.border,
+                          borderColor: selectedStyle.keyboardType === keyboard.type ? theme.primary : 'transparent',
+                          borderWidth: selectedStyle.keyboardType === keyboard.type ? 2 : 0,
                         }
                       ]}
-                      value={customColor}
-                      onChangeText={(text) => {
-                        setCustomColor(text);
-                        if (isValidHexColor(text)) {
-                          setUseCustomColor(true);
-                        }
+                      onPress={() => setSelectedStyle(prev => ({ ...prev, keyboardType: keyboard.type }))}
+                      activeOpacity={0.8}
+                    >
+                      <View style={[styles.optionIcon, { backgroundColor: `${theme.primary}20` }]}>
+                        <keyboard.icon size={scale(18)} color={theme.primary} strokeWidth={2} />
+                      </View>
+                      <Text style={[styles.optionName, { color: theme.text }]} numberOfLines={1}>
+                        {keyboard.name}
+                      </Text>
+                      <Text style={[styles.optionDescription, { color: theme.textSecondary }]} numberOfLines={1}>
+                        {keyboard.description}
+                      </Text>
+                      
+                      {selectedStyle.keyboardType === keyboard.type && (
+                        <View style={[styles.selectedIndicator, { backgroundColor: theme.primary }]}>
+                          <Check size={scale(12)} color="#FFFFFF" strokeWidth={3} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Text Color */}
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                  Text Color
+                </Text>
+                
+                {/* Custom Color Picker */}
+                <View style={[styles.colorPickerContainer, { backgroundColor: theme.surface }]}>
+                  <TouchableOpacity 
+                    style={[styles.customColorButton, { backgroundColor: customColor }]}
+                    onPress={() => setShowColorPicker(!showColorPicker)}
+                  >
+                    <Droplet size={scale(18)} color={customColor === '#FFFFFF' ? '#000000' : '#FFFFFF'} />
+                  </TouchableOpacity>
+                  <Text style={[styles.customColorLabel, { color: theme.text }]}>
+                    Custom Color
+                  </Text>
+                  <Text style={[styles.customColorValue, { color: theme.textSecondary }]}>
+                    {customColor}
+                  </Text>
+                </View>
+
+                {showColorPicker && (
+                  <View style={[styles.colorSliders, { backgroundColor: theme.surface }]}>
+                    <View style={styles.colorSlider}>
+                      <Text style={[styles.sliderLabel, { color: theme.text }]}>Red</Text>
+                      <View style={styles.sliderContainer}>
+                        <Text style={[styles.sliderValue, { color: theme.textSecondary }]}>
+                          {Math.round((parseInt(customColor.slice(1, 3), 16) / 255) * 100)}%
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.colorSlider}>
+                      <Text style={[styles.sliderLabel, { color: theme.text }]}>Green</Text>
+                      <View style={styles.sliderContainer}>
+                        <Text style={[styles.sliderValue, { color: theme.textSecondary }]}>
+                          {Math.round((parseInt(customColor.slice(3, 5), 16) / 255) * 100)}%
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.colorSlider}>
+                      <Text style={[styles.sliderLabel, { color: theme.text }]}>Blue</Text>
+                      <View style={styles.sliderContainer}>
+                        <Text style={[styles.sliderValue, { color: theme.textSecondary }]}>
+                          {Math.round((parseInt(customColor.slice(5, 7), 16) / 255) * 100)}%
+                        </Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.applyColorButton, { backgroundColor: theme.primary }]}
+                      onPress={() => {
+                        setSelectedStyle(prev => ({ ...prev, color: customColor }));
+                        setShowColorPicker(false);
                       }}
-                      placeholder="#FFFFFF"
-                      placeholderTextColor={theme.textSecondary}
-                      maxLength={7}
-                    />
+                    >
+                      <Text style={styles.applyColorText}>Apply Color</Text>
+                    </TouchableOpacity>
                   </View>
-                </View>
-              )}
+                )}
+                
+                {/* Preset Colors */}
+                {['primary', 'neutral', 'vibrant', 'pastel'].map((category) => (
+                  <View key={category} style={styles.colorCategory}>
+                    <Text style={[styles.colorCategoryTitle, { color: theme.textSecondary }]}>
+                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                    </Text>
+                    <View style={styles.colorGrid}>
+                      {TEXT_COLORS.filter(color => color.category === category).map((color) => (
+                        <TouchableOpacity
+                          key={color.id}
+                          style={[
+                            styles.colorOption,
+                            {
+                              backgroundColor: color.color,
+                              borderColor: selectedStyle.color === color.color ? theme.primary : theme.border,
+                              borderWidth: selectedStyle.color === color.color ? 3 : 1,
+                            }
+                          ]}
+                          onPress={() => {
+                            setSelectedStyle(prev => ({ ...prev, color: color.color }));
+                            setCustomColor(color.color);
+                          }}
+                          activeOpacity={0.8}
+                        >
+                          {selectedStyle.color === color.color && (
+                            <View style={styles.colorSelectedIndicator}>
+                              <Check 
+                                size={scale(12)} 
+                                color={color.color === '#FFFFFF' ? '#000000' : '#FFFFFF'} 
+                                strokeWidth={3} 
+                              />
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                ))}
+              </View>
 
-              {/* Typography Tab */}
-              {activeTab === 'typography' && (
-                <View style={styles.section}>
-                  {/* Font Size */}
-                  <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                    Font Size
-                  </Text>
-                  <CustomSlider
-                    value={fontSize}
-                    minimumValue={12}
-                    maximumValue={48}
-                    onValueChange={setFontSize}
-                    theme={theme}
-                  />
-
-                  {/* Font Family */}
-                  <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                    Font Family
-                  </Text>
-                  <View style={styles.fontFamilyGrid}>
-                    {FONT_FAMILIES.map((font) => (
-                      <TouchableOpacity
-                        key={font.id}
-                        style={[
-                          styles.fontFamilyOption,
-                          {
-                            backgroundColor: theme.surface,
-                            borderColor: selectedFontFamily === font.id ? theme.primary : 'transparent',
-                            borderWidth: selectedFontFamily === font.id ? 2 : 0,
-                          }
-                        ]}
-                        onPress={() => setSelectedFontFamily(font.id)}
-                      >
+              {/* Font Size */}
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                  Font Size
+                </Text>
+                <View style={styles.optionsGrid}>
+                  {FONT_SIZES.map((fontSize) => (
+                    <TouchableOpacity
+                      key={fontSize.id}
+                      style={[
+                        styles.optionItem,
+                        {
+                          backgroundColor: theme.surface,
+                          borderColor: selectedStyle.fontSize === fontSize.size ? theme.primary : 'transparent',
+                          borderWidth: selectedStyle.fontSize === fontSize.size ? 2 : 0,
+                        }
+                      ]}
+                      onPress={() => setSelectedStyle(prev => ({ ...prev, fontSize: fontSize.size }))}
+                      activeOpacity={0.8}
+                    >
+                      <View style={[styles.fontSizePreview, { backgroundColor: `${theme.primary}20` }]}>
                         <Text style={[
-                          styles.fontFamilyText,
-                          {
-                            color: theme.text,
-                            fontFamily: font.family,
+                          styles.fontSizeText, 
+                          { 
+                            color: theme.primary,
+                            fontSize: moderateScale(Math.min(fontSize.size * 0.6, 16))
                           }
                         ]}>
-                          {font.name}
+                          Aa
                         </Text>
-                        <Text style={[styles.fontFamilyDescription, { color: theme.textSecondary }]}>
-                          {font.description}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+                      </View>
+                      <Text style={[styles.optionName, { color: theme.text }]} numberOfLines={1}>
+                        {fontSize.name}
+                      </Text>
+                      <Text style={[styles.optionDescription, { color: theme.textSecondary }]} numberOfLines={1}>
+                        {fontSize.description}
+                      </Text>
+                      
+                      {selectedStyle.fontSize === fontSize.size && (
+                        <View style={[styles.selectedIndicator, { backgroundColor: theme.primary }]}>
+                          <Check size={scale(12)} color="#FFFFFF" strokeWidth={3} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
                 </View>
-              )}
+              </View>
 
-              {/* Format Tab */}
-              {activeTab === 'format' && (
-                <View style={styles.section}>
-                  {/* Formatting Options */}
-                  <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                    Text Formatting
-                  </Text>
-                  <View style={styles.formatGrid}>
-                    {[
-                      { id: 'bold', label: 'Bold', icon: Bold, active: isBold, onPress: () => setIsBold(!isBold) },
-                      { id: 'italic', label: 'Italic', icon: Italic, active: isItalic, onPress: () => setIsItalic(!isItalic) },
-                      { id: 'underline', label: 'Underline', icon: Underline, active: isUnderlined, onPress: () => setIsUnderlined(!isUnderlined) },
-                    ].map((format) => (
-                      <TouchableOpacity
-                        key={format.id}
-                        style={[
-                          styles.formatOption,
-                          {
-                            backgroundColor: format.active ? theme.primary : theme.surface,
-                            borderColor: format.active ? theme.primary : 'transparent',
-                          }
-                        ]}
-                        onPress={format.onPress}
-                      >
-                        <format.icon 
-                          size={scale(20)} 
-                          color={format.active ? '#FFFFFF' : theme.text} 
-                        />
+              {/* Font Style */}
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                  Font Style
+                </Text>
+                <View style={styles.optionsGrid}>
+                  {FONT_FAMILIES.map((fontFamily) => (
+                    <TouchableOpacity
+                      key={fontFamily.id}
+                      style={[
+                        styles.optionItem,
+                        {
+                          backgroundColor: theme.surface,
+                          borderColor: selectedStyle.fontFamily === fontFamily.family ? theme.primary : 'transparent',
+                          borderWidth: selectedStyle.fontFamily === fontFamily.family ? 2 : 0,
+                        }
+                      ]}
+                      onPress={() => setSelectedStyle(prev => ({ ...prev, fontFamily: fontFamily.family }))}
+                      activeOpacity={0.8}
+                    >
+                      <View style={[styles.fontStylePreview, { backgroundColor: `${theme.primary}20` }]}>
                         <Text style={[
-                          styles.formatText,
-                          {
-                            color: format.active ? '#FFFFFF' : theme.text,
-                            fontFamily: format.active ? 'Inter-SemiBold' : 'Inter-Medium',
+                          styles.fontStyleText, 
+                          { 
+                            color: theme.primary,
+                            fontFamily: fontFamily.family,
+                            fontWeight: fontFamily.weight
                           }
                         ]}>
-                          {format.label}
+                          Aa
                         </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+                      </View>
+                      <Text style={[styles.optionName, { color: theme.text }]} numberOfLines={1}>
+                        {fontFamily.name}
+                      </Text>
+                      <Text style={[styles.optionDescription, { color: theme.textSecondary }]} numberOfLines={1}>
+                        {fontFamily.description}
+                      </Text>
+                      
+                      {selectedStyle.fontFamily === fontFamily.family && (
+                        <View style={[styles.selectedIndicator, { backgroundColor: theme.primary }]}>
+                          <Check size={scale(12)} color="#FFFFFF" strokeWidth={3} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
 
-                  {/* Keyboard Type */}
-                  <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                    Keyboard Type
-                  </Text>
-                  <View style={styles.keyboardGrid}>
-                    {KEYBOARD_OPTIONS.map((keyboard) => (
-                      <TouchableOpacity
-                        key={keyboard.id}
-                        style={[
-                          styles.keyboardOption,
-                          {
-                            backgroundColor: theme.surface,
-                            borderColor: selectedKeyboard === keyboard.id ? theme.primary : 'transparent',
-                            borderWidth: selectedKeyboard === keyboard.id ? 2 : 0,
-                          }
-                        ]}
-                        onPress={() => setSelectedKeyboard(keyboard.id)}
-                      >
-                        <keyboard.icon 
-                          size={scale(20)} 
-                          color={selectedKeyboard === keyboard.id ? theme.primary : theme.text} 
-                        />
+              {/* Text Alignment */}
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                  Text Alignment
+                </Text>
+                <View style={styles.optionsGrid}>
+                  {['left', 'center', 'right'].map((alignment) => (
+                    <TouchableOpacity
+                      key={alignment}
+                      style={[
+                        styles.optionItem,
+                        {
+                          backgroundColor: theme.surface,
+                          borderColor: selectedStyle.textAlign === alignment ? theme.primary : 'transparent',
+                          borderWidth: selectedStyle.textAlign === alignment ? 2 : 0,
+                        }
+                      ]}
+                      onPress={() => setSelectedStyle(prev => ({ ...prev, textAlign: alignment as 'left' | 'center' | 'right' }))}
+                      activeOpacity={0.8}
+                    >
+                      <View style={[styles.textAlignPreview, { backgroundColor: `${theme.primary}20` }]}>
                         <Text style={[
-                          styles.keyboardText,
-                          {
-                            color: selectedKeyboard === keyboard.id ? theme.primary : theme.text,
-                            fontFamily: selectedKeyboard === keyboard.id ? 'Inter-SemiBold' : 'Inter-Medium',
+                          styles.textAlignText, 
+                          { 
+                            color: theme.primary,
+                            fontSize: moderateScale(Math.min(24, 16))
                           }
                         ]}>
-                          {keyboard.name}
+                          {alignment.charAt(0).toUpperCase() + alignment.slice(1)}
                         </Text>
-                        <Text style={[styles.keyboardDescription, { color: theme.textSecondary }]}>
-                          {keyboard.description}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+                      </View>
+                      <Text style={[styles.optionName, { color: theme.text }]} numberOfLines={1}>
+                        {alignment.charAt(0).toUpperCase() + alignment.slice(1)}
+                      </Text>
+                      <Text style={[styles.optionDescription, { color: theme.textSecondary }]} numberOfLines={1}>
+                        {alignment.charAt(0).toUpperCase() + alignment.slice(1)}
+                      </Text>
+                      
+                      {selectedStyle.textAlign === alignment && (
+                        <View style={[styles.selectedIndicator, { backgroundColor: theme.primary }]}>
+                          <Check size={scale(12)} color="#FFFFFF" strokeWidth={3} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
                 </View>
-              )}
+              </View>
+
+              {/* Font Weight */}
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                  Font Weight
+                </Text>
+                <View style={styles.optionsGrid}>
+                  {['400', '500', '600', '700', '800'].map((weight) => (
+                    <TouchableOpacity
+                      key={weight}
+                      style={[
+                        styles.optionItem,
+                        {
+                          backgroundColor: theme.surface,
+                          borderColor: selectedStyle.fontWeight === weight ? theme.primary : 'transparent',
+                          borderWidth: selectedStyle.fontWeight === weight ? 2 : 0,
+                        }
+                      ]}
+                      onPress={() => setSelectedStyle(prev => ({ ...prev, fontWeight: weight as '400' | '500' | '600' | '700' | '800' }))}
+                      activeOpacity={0.8}
+                    >
+                      <View style={[styles.fontWeightPreview, { backgroundColor: `${theme.primary}20` }]}>
+                        <Text style={[
+                          styles.fontWeightText, 
+                          { 
+                            color: theme.primary,
+                            fontWeight: weight as '400' | '500' | '600' | '700' | '800'
+                          }
+                        ]}>
+                          Aa
+                        </Text>
+                      </View>
+                      <Text style={[styles.optionName, { color: theme.text }]} numberOfLines={1}>
+                        {weight}
+                      </Text>
+                      <Text style={[styles.optionDescription, { color: theme.textSecondary }]} numberOfLines={1}>
+                        {weight}
+                      </Text>
+                      
+                      {selectedStyle.fontWeight === weight as '400' | '500' | '600' | '700' | '800' && (
+                        <View style={[styles.selectedIndicator, { backgroundColor: theme.primary }]}>
+                          <Check size={scale(12)} color="#FFFFFF" strokeWidth={3} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Font Style */}
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                  Font Style
+                </Text>
+                <View style={styles.optionsGrid}>
+                  {['normal', 'italic'].map((style) => (
+                    <TouchableOpacity
+                      key={style}
+                      style={[
+                        styles.optionItem,
+                        {
+                          backgroundColor: theme.surface,
+                          borderColor: selectedStyle.fontStyle === style ? theme.primary : 'transparent',
+                          borderWidth: selectedStyle.fontStyle === style ? 2 : 0,
+                        }
+                      ]}
+                      onPress={() => setSelectedStyle(prev => ({ ...prev, fontStyle: style as 'normal' | 'italic' }))}
+                      activeOpacity={0.8}
+                    >
+                      <View style={[styles.fontStylePreview, { backgroundColor: `${theme.primary}20` }]}>
+                        <Text style={[
+                          styles.fontStyleText, 
+                          { 
+                            color: theme.primary,
+                            fontStyle: selectedStyle.fontStyle === style ? 'italic' : 'normal'
+                          }
+                        ]}>
+                          Aa
+                        </Text>
+                      </View>
+                      <Text style={[styles.optionName, { color: theme.text }]} numberOfLines={1}>
+                        {style.charAt(0).toUpperCase() + style.slice(1)}
+                      </Text>
+                      <Text style={[styles.optionDescription, { color: theme.textSecondary }]} numberOfLines={1}>
+                        {style.charAt(0).toUpperCase() + style.slice(1)}
+                      </Text>
+                      
+                      {selectedStyle.fontStyle === style && (
+                        <View style={[styles.selectedIndicator, { backgroundColor: theme.primary }]}>
+                          <Check size={scale(12)} color="#FFFFFF" strokeWidth={3} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Text Decoration */}
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                  Text Decoration
+                </Text>
+                <View style={styles.optionsGrid}>
+                  {['none', 'underline', 'line-through', 'underline line-through'].map((decoration) => (
+                    <TouchableOpacity
+                      key={decoration}
+                      style={[
+                        styles.optionItem,
+                        {
+                          backgroundColor: theme.surface,
+                          borderColor: selectedStyle.textDecorationLine === decoration ? theme.primary : 'transparent',
+                          borderWidth: selectedStyle.textDecorationLine === decoration ? 2 : 0,
+                        }
+                      ]}
+                      onPress={() => setSelectedStyle(prev => ({ ...prev, textDecorationLine: decoration as 'none' | 'underline' | 'line-through' | 'underline line-through' }))}
+                      activeOpacity={0.8}
+                    >
+                      <View style={[styles.textDecorationPreview, { backgroundColor: `${theme.primary}20` }]}>
+                        <Text style={[
+                          styles.textDecorationText, 
+                          { 
+                            color: theme.primary,
+                            textDecorationLine: selectedStyle.textDecorationLine === decoration ? 'underline' : 'none'
+                          }
+                        ]}>
+                          {decoration.charAt(0).toUpperCase() + decoration.slice(1)}
+                        </Text>
+                      </View>
+                      <Text style={[styles.optionName, { color: theme.text }]} numberOfLines={1}>
+                        {decoration.charAt(0).toUpperCase() + decoration.slice(1)}
+                      </Text>
+                      <Text style={[styles.optionDescription, { color: theme.textSecondary }]} numberOfLines={1}>
+                        {decoration.charAt(0).toUpperCase() + decoration.slice(1)}
+                      </Text>
+                      
+                      {selectedStyle.textDecorationLine === decoration && (
+                        <View style={[styles.selectedIndicator, { backgroundColor: theme.primary }]}>
+                          <Check size={scale(12)} color="#FFFFFF" strokeWidth={3} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
             </ScrollView>
           </Animated.View>
         </SafeAreaView>
@@ -696,212 +903,388 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
+  
+  // Header - Responsive
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: getResponsiveSpacing(20),
-    paddingVertical: getResponsiveSpacing(16),
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: scale(getResponsiveSpacing(16)),
+    paddingVertical: verticalScale(getResponsiveSpacing(14)),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(60, 60, 67, 0.29)',
+    minHeight: verticalScale(deviceCategory === 'extraSmall' ? 48 : 52),
   },
   headerButton: {
-    width: scale(32),
-    height: scale(32),
-    borderRadius: scale(16),
+    width: scale(deviceCategory === 'extraSmall' ? 36 : 40),
+    height: scale(deviceCategory === 'extraSmall' ? 36 : 40),
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerCenter: {
     flex: 1,
     alignItems: 'center',
+    paddingHorizontal: scale(getResponsiveSpacing(8)),
   },
   headerTitle: {
-    fontSize: moderateScale(18),
-    fontFamily: 'Inter-Bold',
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 15 : 16),
+    fontWeight: '600',
+    textAlign: 'center',
   },
   applyButton: {
-    paddingHorizontal: getResponsiveSpacing(16),
-    paddingVertical: getResponsiveSpacing(8),
+    paddingHorizontal: scale(getResponsiveSpacing(16)),
+    paddingVertical: verticalScale(getResponsiveSpacing(8)),
     borderRadius: scale(16),
+    minWidth: scale(deviceCategory === 'extraSmall' ? 60 : 70),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   applyButtonText: {
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 14 : 15),
+    fontWeight: '600',
     color: '#FFFFFF',
-    fontSize: moderateScale(14),
-    fontFamily: 'Inter-SemiBold',
   },
+
+  // Content - Responsive
   content: {
     flex: 1,
-    paddingHorizontal: getResponsiveSpacing(20),
   },
+  scrollContent: {
+    paddingTop: verticalScale(getResponsiveSpacing(16)),
+    paddingBottom: verticalScale(getResponsiveSpacing(20)),
+  },
+
+  // Preview - Responsive
   previewContainer: {
+    marginHorizontal: scale(getResponsiveSpacing(16)),
     borderRadius: scale(16),
-    padding: getResponsiveSpacing(16),
-    marginVertical: getResponsiveSpacing(16),
+    padding: scale(getResponsiveSpacing(16)),
+    marginBottom: verticalScale(getResponsiveSpacing(24)),
+    elevation: Platform.OS === 'android' ? 2 : 0,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+      },
+    }),
   },
   previewLabel: {
-    fontSize: moderateScale(12),
-    fontFamily: 'Inter-Medium',
-    marginBottom: getResponsiveSpacing(8),
-    flexDirection: 'row',
-    alignItems: 'center',
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 12 : 13),
+    fontWeight: '500',
+    marginBottom: verticalScale(getResponsiveSpacing(8)),
   },
   previewBox: {
     borderRadius: scale(12),
-    padding: getResponsiveSpacing(16),
+    padding: scale(getResponsiveSpacing(16)),
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: verticalScale(60),
+    minHeight: verticalScale(deviceCategory === 'extraSmall' ? 60 : 70),
   },
   previewText: {
-    fontSize: moderateScale(20),
-    fontFamily: 'Inter-Bold',
     textAlign: 'center',
   },
-  tabContainer: {
-    flexDirection: 'row',
-    marginBottom: getResponsiveSpacing(16),
-    gap: getResponsiveSpacing(8),
-  },
-  tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: getResponsiveSpacing(12),
-    borderRadius: scale(12),
-    gap: getResponsiveSpacing(6),
-  },
-  tabText: {
-    fontSize: moderateScale(12),
-  },
-  scrollContent: {
-    paddingBottom: getResponsiveSpacing(20),
-  },
+
+  // Sections - Responsive
   section: {
-    marginBottom: getResponsiveSpacing(24),
+    marginBottom: verticalScale(getResponsiveSpacing(32)),
   },
   sectionTitle: {
-    fontSize: moderateScale(16),
-    fontFamily: 'Inter-SemiBold',
-    marginBottom: getResponsiveSpacing(12),
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 18 : 20),
+    fontWeight: '700',
+    marginHorizontal: scale(getResponsiveSpacing(16)),
+    marginBottom: verticalScale(getResponsiveSpacing(16)),
+  },
+
+  // Options Grid - Responsive
+  optionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: scale(getResponsiveSpacing(16)),
+    gap: scale(getResponsiveSpacing(12)),
+  },
+  optionItem: {
+    width: (SCREEN_WIDTH - scale(getResponsiveSpacing(16)) * 2 - scale(getResponsiveSpacing(12))) / 2,
+    borderRadius: scale(16),
+    padding: scale(getResponsiveSpacing(16)),
+    alignItems: 'center',
+    position: 'relative',
+    minHeight: verticalScale(deviceCategory === 'extraSmall' ? 100 : 110),
+    elevation: Platform.OS === 'android' ? 2 : 0,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+      },
+    }),
+  },
+  optionIcon: {
+    width: scale(deviceCategory === 'extraSmall' ? 36 : 40),
+    height: scale(deviceCategory === 'extraSmall' ? 36 : 40),
+    borderRadius: scale(deviceCategory === 'extraSmall' ? 18 : 20),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: verticalScale(getResponsiveSpacing(8)),
+  },
+  optionName: {
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 14 : 15),
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: verticalScale(getResponsiveSpacing(4)),
+  },
+  optionDescription: {
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 11 : 12),
+    fontWeight: '400',
+    textAlign: 'center',
+    lineHeight: moderateScale(deviceCategory === 'extraSmall' ? 14 : 16),
+  },
+  selectedIndicator: {
+    position: 'absolute',
+    top: scale(8),
+    right: scale(8),
+    width: scale(deviceCategory === 'extraSmall' ? 20 : 24),
+    height: scale(deviceCategory === 'extraSmall' ? 20 : 24),
+    borderRadius: scale(deviceCategory === 'extraSmall' ? 10 : 12),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Color Options - Responsive
+  colorCategory: {
+    marginBottom: verticalScale(getResponsiveSpacing(20)),
+  },
+  colorCategoryTitle: {
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 14 : 15),
+    fontWeight: '500',
+    marginHorizontal: scale(getResponsiveSpacing(16)),
+    marginBottom: verticalScale(getResponsiveSpacing(8)),
   },
   colorGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: getResponsiveSpacing(8),
-    marginBottom: getResponsiveSpacing(16),
+    paddingHorizontal: scale(getResponsiveSpacing(16)),
+    gap: scale(getResponsiveSpacing(8)),
   },
   colorOption: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(20),
+    width: scale(deviceCategory === 'extraSmall' ? 36 : 40),
+    height: scale(deviceCategory === 'extraSmall' ? 36 : 40),
+    borderRadius: scale(deviceCategory === 'extraSmall' ? 18 : 20),
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    elevation: Platform.OS === 'android' ? 2 : 0,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+      },
+    }),
   },
-  customColorContainer: {
+  colorSelectedIndicator: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Font Previews - Responsive
+  fontSizePreview: {
+    width: scale(deviceCategory === 'extraSmall' ? 36 : 40),
+    height: scale(deviceCategory === 'extraSmall' ? 36 : 40),
+    borderRadius: scale(deviceCategory === 'extraSmall' ? 18 : 20),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: verticalScale(getResponsiveSpacing(8)),
+  },
+  fontSizeText: {
+    fontWeight: '600',
+  },
+  fontStylePreview: {
+    width: scale(deviceCategory === 'extraSmall' ? 36 : 40),
+    height: scale(deviceCategory === 'extraSmall' ? 36 : 40),
+    borderRadius: scale(deviceCategory === 'extraSmall' ? 18 : 20),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: verticalScale(getResponsiveSpacing(8)),
+  },
+  fontStyleText: {
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 16 : 18),
+  },
+
+  // Text Alignment Previews - Responsive
+  textAlignPreview: {
+    width: scale(deviceCategory === 'extraSmall' ? 36 : 40),
+    height: scale(deviceCategory === 'extraSmall' ? 36 : 40),
+    borderRadius: scale(deviceCategory === 'extraSmall' ? 18 : 20),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: verticalScale(getResponsiveSpacing(8)),
+  },
+  textAlignText: {
+    fontWeight: '600',
+  },
+
+  // Font Weight Previews - Responsive
+  fontWeightPreview: {
+    width: scale(deviceCategory === 'extraSmall' ? 36 : 40),
+    height: scale(deviceCategory === 'extraSmall' ? 36 : 40),
+    borderRadius: scale(deviceCategory === 'extraSmall' ? 18 : 20),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: verticalScale(getResponsiveSpacing(8)),
+  },
+  fontWeightText: {
+    fontWeight: '600',
+  },
+
+  // Text Decoration Previews - Responsive
+  textDecorationPreview: {
+    width: scale(deviceCategory === 'extraSmall' ? 36 : 40),
+    height: scale(deviceCategory === 'extraSmall' ? 36 : 40),
+    borderRadius: scale(deviceCategory === 'extraSmall' ? 18 : 20),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: verticalScale(getResponsiveSpacing(8)),
+  },
+  textDecorationText: {
+    fontWeight: '600',
+  },
+
+  // Color Picker Styles - Responsive
+  colorPickerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: getResponsiveSpacing(12),
+    marginHorizontal: scale(getResponsiveSpacing(16)),
+    padding: scale(getResponsiveSpacing(16)),
+    borderRadius: scale(12),
+    marginBottom: verticalScale(getResponsiveSpacing(16)),
+    gap: scale(getResponsiveSpacing(12)),
+    elevation: Platform.OS === 'android' ? 2 : 0,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+      },
+    }),
   },
-  customColorPreview: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(20),
+  customColorButton: {
+    width: scale(deviceCategory === 'extraSmall' ? 48 : 56),
+    height: scale(deviceCategory === 'extraSmall' ? 48 : 56),
+    borderRadius: scale(deviceCategory === 'extraSmall' ? 24 : 28),
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 2,
+    borderColor: 'rgba(0,0,0,0.1)',
   },
-  customColorInput: {
+  customColorLabel: {
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 15 : 16),
+    fontWeight: '600',
     flex: 1,
-    height: scale(40),
+  },
+  customColorValue: {
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 13 : 14),
+    fontWeight: '400',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  colorSliders: {
+    marginHorizontal: scale(getResponsiveSpacing(16)),
+    padding: scale(getResponsiveSpacing(16)),
     borderRadius: scale(12),
-    paddingHorizontal: getResponsiveSpacing(12),
-    fontSize: moderateScale(14),
-    fontFamily: 'Inter-Medium',
-    borderWidth: 1,
+    marginBottom: verticalScale(getResponsiveSpacing(16)),
+    gap: scale(getResponsiveSpacing(12)),
+    elevation: Platform.OS === 'android' ? 2 : 0,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+      },
+    }),
+  },
+  colorSlider: {
+    gap: scale(getResponsiveSpacing(8)),
+  },
+  sliderLabel: {
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 14 : 15),
+    fontWeight: '500',
   },
   sliderContainer: {
-    marginBottom: getResponsiveSpacing(16),
-  },
-  sliderTrack: {
-    height: scale(4),
-    borderRadius: scale(2),
-    marginBottom: getResponsiveSpacing(8),
-    position: 'relative',
-  },
-  sliderActive: {
-    height: scale(4),
-    borderRadius: scale(2),
-    position: 'absolute',
-    top: 0,
-    left: 0,
-  },
-  sliderThumb: {
-    width: scale(20),
-    height: scale(20),
-    borderRadius: scale(10),
-    position: 'absolute',
-    top: scale(-8),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   sliderValue: {
-    fontSize: moderateScale(12),
-    fontFamily: 'Inter-Medium',
-    textAlign: 'center',
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 13 : 14),
+    fontWeight: '400',
+    minWidth: scale(40),
+    textAlign: 'right',
   },
-  fontFamilyGrid: {
-    gap: getResponsiveSpacing(8),
-  },
-  fontFamilyOption: {
-    padding: getResponsiveSpacing(16),
-    borderRadius: scale(12),
-    borderWidth: 2,
-  },
-  fontFamilyText: {
-    fontSize: moderateScale(16),
-    marginBottom: getResponsiveSpacing(4),
-  },
-  fontFamilyDescription: {
-    fontSize: moderateScale(12),
-    fontFamily: 'Inter-Regular',
-  },
-  formatGrid: {
-    flexDirection: 'row',
-    gap: getResponsiveSpacing(8),
-    marginBottom: getResponsiveSpacing(16),
-  },
-  formatOption: {
-    flex: 1,
+  applyColorButton: {
+    paddingVertical: verticalScale(getResponsiveSpacing(12)),
+    paddingHorizontal: scale(getResponsiveSpacing(16)),
+    borderRadius: scale(8),
     alignItems: 'center',
-    paddingVertical: getResponsiveSpacing(16),
-    borderRadius: scale(12),
-    borderWidth: 2,
-    gap: getResponsiveSpacing(6),
+    marginTop: verticalScale(getResponsiveSpacing(8)),
   },
-  formatText: {
-    fontSize: moderateScale(12),
+  applyColorText: {
+    color: '#FFFFFF',
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 14 : 15),
+    fontWeight: '600',
   },
-  keyboardGrid: {
+
+  // Quick Format Styles - Responsive
+  quickFormatContainer: {
+    marginHorizontal: scale(getResponsiveSpacing(16)),
+    borderRadius: scale(16),
+    padding: scale(getResponsiveSpacing(16)),
+    marginBottom: verticalScale(getResponsiveSpacing(24)),
+    elevation: Platform.OS === 'android' ? 2 : 0,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+      },
+    }),
+  },
+  quickFormatLabel: {
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 12 : 13),
+    fontWeight: '500',
+    marginBottom: verticalScale(getResponsiveSpacing(12)),
+  },
+  formatToggles: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(getResponsiveSpacing(8)),
     flexWrap: 'wrap',
-    gap: getResponsiveSpacing(8),
   },
-  keyboardOption: {
-    width: '48%',
-    padding: getResponsiveSpacing(16),
-    borderRadius: scale(12),
+  formatToggle: {
+    width: scale(deviceCategory === 'extraSmall' ? 36 : 40),
+    height: scale(deviceCategory === 'extraSmall' ? 36 : 40),
+    borderRadius: scale(deviceCategory === 'extraSmall' ? 8 : 10),
+    justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    gap: getResponsiveSpacing(6),
+    borderWidth: 1,
+    elevation: Platform.OS === 'android' ? 1 : 0,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+    }),
   },
-  keyboardText: {
-    fontSize: moderateScale(14),
-  },
-  keyboardDescription: {
-    fontSize: moderateScale(10),
-    fontFamily: 'Inter-Regular',
-    textAlign: 'center',
+  alignmentGroup: {
+    flexDirection: 'row',
+    gap: scale(getResponsiveSpacing(4)),
+    borderRadius: scale(deviceCategory === 'extraSmall' ? 8 : 10),
+    overflow: 'hidden',
   },
 }); 
