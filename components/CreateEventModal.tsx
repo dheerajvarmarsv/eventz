@@ -370,27 +370,23 @@ export function CreateEventModal({ visible, onClose, onSave, theme }: CreateEven
 
       <DateTimePickerModal
         visible={showDatePicker}
-        mode="date"
         onClose={() => setShowDatePicker(false)}
         onSelect={handleDateSelect}
-        theme={theme}
-        title="Select Event Date"
+        currentDate={selectedDate}
       />
 
       <DateTimePickerModal
         visible={showTimePicker}
-        mode="time"
         onClose={() => setShowTimePicker(false)}
         onSelect={handleTimeSelect}
-        theme={theme}
-        title="Select Event Time"
+        currentDate={selectedDate}
+        currentTime={selectedTime}
       />
 
       <LocationPickerModal
         visible={showLocationPicker}
         onClose={() => setShowLocationPicker(false)}
         onSelect={handleLocationSelect}
-        theme={theme}
       />
     </>
   );

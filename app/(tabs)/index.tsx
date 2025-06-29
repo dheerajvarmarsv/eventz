@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Calendar, MapPin, Users, Star, Share2 } from 'lucide-react-native';
 import { EventCard } from '@/components/EventCard';
-import { CreateEventModal } from '@/components/CreateEventModal';
+import { CreateEventScreen } from '@/components/CreateEventScreen';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export default function EventsScreen() {
@@ -175,11 +175,10 @@ export default function EventsScreen() {
         )}
       </ScrollView>
 
-      <CreateEventModal
+      <CreateEventScreen
         visible={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        onSave={handleCreateEvent}
-        theme={theme}
+        onEventCreated={handleCreateEvent}
       />
     </SafeAreaView>
   );

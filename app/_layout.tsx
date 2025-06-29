@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { Platform } from 'react-native';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { useFonts } from 'expo-font';
 import {
@@ -36,12 +37,38 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack 
+        screenOptions={{ 
+          headerShown: false,
+          // Full screen layout
+          presentation: Platform.OS === 'ios' ? 'fullScreenModal' : 'card',
+          gestureEnabled: false,
+          // Ensure no margins or padding
+          contentStyle: { 
+            backgroundColor: 'transparent',
+            margin: 0,
+            padding: 0,
+          },
+        }}
+      >
+        <Stack.Screen 
+          name="onboarding" 
+          options={{ 
+            headerShown: false,
+            gestureEnabled: false,
+            presentation: 'fullScreenModal',
+          }} 
+        />
+        <Stack.Screen 
+          name="(tabs)" 
+          options={{ 
+            headerShown: false,
+            gestureEnabled: true,
+          }} 
+        />
         <Stack.Screen name="+not-found" />
       </Stack>
-      <StatusBar style="auto" />
+      <StatusBar style="light" translucent backgroundColor="transparent" />
     </ThemeProvider>
   );
 }
