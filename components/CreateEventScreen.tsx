@@ -44,6 +44,7 @@ import { LocationPickerModal } from './LocationPickerModal';
 import { EventDetailsModal } from './EventDetailsModal';
 import { BackgroundPickerModal } from './BackgroundPickerModal';
 import { ColorPicker } from './ColorPicker';
+import { TextStylePickerModal } from './TextStylePickerModal';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -131,6 +132,39 @@ interface EventData {
   };
 
 // Helper function to get proper font family for weight and style
+const getFontDisplayName = (fontFamily: string) => {
+  const fontMap: { [key: string]: string } = {
+    'Inter-Regular': 'Inter Regular',
+    'Inter-Medium': 'Inter Medium',
+    'Inter-SemiBold': 'Inter SemiBold', 
+    'Inter-Bold': 'Inter Bold',
+    'Inter-ExtraBold': 'Inter ExtraBold',
+    'System': 'System Font',
+    'Arial': 'Arial',
+    'Helvetica': 'Helvetica',
+    'Verdana': 'Verdana',
+    'Trebuchet MS': 'Trebuchet MS',
+    'Times New Roman': 'Times New Roman',
+    'Georgia': 'Georgia',
+    'Palatino': 'Palatino',
+    'Courier': 'Courier',
+    'Courier New': 'Courier New',
+    'Menlo': 'Menlo',
+    'Impact': 'Impact',
+    'American Typewriter': 'American Typewriter',
+    'Copperplate': 'Copperplate',
+    'Zapfino': 'Zapfino',
+    'Snell Roundhand': 'Snell Roundhand',
+    'Marker Felt': 'Marker Felt',
+    'sans-serif': 'Sans Serif',
+    'serif': 'Serif',
+    'monospace': 'Monospace',
+    'cursive': 'Cursive',
+    'fantasy': 'Fantasy'
+  };
+  return fontMap[fontFamily] || 'Select Font Style';
+};
+
 const getFontFamily = (baseFamily: string, fontWeight: string, fontStyle: string) => {
   if (fontStyle === 'italic') {
     // For italic, we need to use Inter-Italic variants
@@ -234,6 +268,7 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
   const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
   const [showTitleInput, setShowTitleInput] = useState(false);
   const [showInvitationPreview, setShowInvitationPreview] = useState(false);
+  const [showTextStylePicker, setShowTextStylePicker] = useState(false);
 
   // Animation values
   const headerOpacity = useSharedValue(0);
@@ -334,6 +369,23 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
       backgroundImage: backgroundUrl,
     }));
     setShowBackgroundPicker(false);
+  };
+
+  const handleTextStyleApply = (textStyle: any) => {
+    setEventData(prev => ({
+      ...prev,
+      titleStyle: {
+        ...prev.titleStyle,
+        color: textStyle.color,
+        fontSize: textStyle.fontSize,
+        fontFamily: textStyle.fontFamily,
+        fontWeight: textStyle.fontWeight,
+        textAlign: textStyle.textAlign,
+        fontStyle: textStyle.fontStyle,
+        textDecorationLine: textStyle.textDecorationLine,
+      }
+    }));
+    setShowTextStylePicker(false);
   };
 
   const formatDateTime = () => {
@@ -711,7 +763,7 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
             <SafeAreaView style={styles.modalSafeArea} edges={['top', 'bottom']}>
               {/* Modal Header */}
               <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
-                <TouchableOpacity 
+            <TouchableOpacity 
                   onPress={() => setShowTitleInput(false)}
                   style={styles.modalHeaderButton}
                 >
@@ -735,7 +787,7 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
               {/* Title Input */}
               <View style={styles.titleInputContent}>
                 <TextInput
-                  style={[
+              style={[
                     styles.titleInputField,
                     {
                       color: eventData.titleStyle.color,
@@ -880,6 +932,41 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
                         ]}>U</Text>
                       </TouchableOpacity>
                     </View>
+                  </View>
+
+                  {/* Font Family */}
+                  <View style={[styles.fontFamilySection, { backgroundColor: theme.surface }]}>
+                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                      Font Family
+                </Text>
+                    <TouchableOpacity
+                      style={[styles.fontFamilyDropdown, { backgroundColor: theme.background, borderColor: theme.border }]}
+                      onPress={() => setShowTextStylePicker(true)}
+                    >
+                      <View style={styles.fontFamilyContent}>
+                        <View style={[styles.fontFamilyPreview, { backgroundColor: `${theme.primary}20` }]}>
+                          <Text style={[
+                            styles.fontFamilyPreviewText,
+                            {
+                              color: theme.primary,
+                              fontFamily: eventData.titleStyle.fontFamily,
+                              fontWeight: eventData.titleStyle.fontWeight
+                            }
+                          ]}>
+                            Aa
+                          </Text>
+                        </View>
+                        <View style={styles.fontFamilyInfo}>
+                          <Text style={[styles.fontFamilyName, { color: theme.text }]}>
+                            {getFontDisplayName(eventData.titleStyle.fontFamily)}
+                          </Text>
+                          <Text style={[styles.fontFamilyDescription, { color: theme.textSecondary }]}>
+                            Select from 17 professional fonts
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={[styles.fontFamilyArrow, { color: theme.textSecondary }]}>▶</Text>
+            </TouchableOpacity>
                   </View>
 
                   {/* Text Alignment */}
@@ -1039,7 +1126,7 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
 
                 </ScrollView>
               </View>
-            </SafeAreaView>
+        </SafeAreaView>
           </View>
         </Modal>
 
@@ -1158,6 +1245,22 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
           onClose={() => setShowBackgroundPicker(false)}
           onSelect={handleBackgroundSelect}
           currentBackground={eventData.backgroundImage}
+        />
+
+        <TextStylePickerModal
+          visible={showTextStylePicker}
+          onClose={() => setShowTextStylePicker(false)}
+          onApply={handleTextStyleApply}
+          currentStyle={{
+            keyboardType: 'default',
+            color: eventData.titleStyle.color,
+            fontSize: eventData.titleStyle.fontSize,
+            fontFamily: eventData.titleStyle.fontFamily,
+            fontWeight: eventData.titleStyle.fontWeight,
+            textAlign: eventData.titleStyle.textAlign,
+            fontStyle: eventData.titleStyle.fontStyle,
+            textDecorationLine: eventData.titleStyle.textDecorationLine,
+          }}
         />
       </View>
     </Modal>
@@ -1776,5 +1879,56 @@ const styles = StyleSheet.create({
     height: getResponsiveSize(44, 46, 48, 50, 52),
     width: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+
+  // Font Family Styles
+  fontFamilySection: {
+    marginBottom: getResponsiveSpacing(20),
+    borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
+    padding: getResponsiveSpacing(16),
+  },
+  fontFamilyDropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: getResponsiveSpacing(16),
+    borderRadius: getResponsiveSize(8, 9, 10, 11, 12),
+    borderWidth: 1,
+    minHeight: getResponsiveSize(60, 65, 70, 75, 80),
+  },
+  fontFamilyContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: getResponsiveSpacing(12),
+  },
+  fontFamilyPreview: {
+    width: getResponsiveSize(40, 42, 44, 46, 48),
+    height: getResponsiveSize(40, 42, 44, 46, 48),
+    borderRadius: getResponsiveSize(20, 21, 22, 23, 24),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fontFamilyPreviewText: {
+    fontSize: getResponsiveSize(18, 19, 20, 21, 22),
+    fontWeight: '600',
+  },
+  fontFamilyInfo: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: getResponsiveSpacing(2),
+  },
+  fontFamilyName: {
+    fontSize: getResponsiveSize(15, 16, 17, 18, 19),
+    fontWeight: '600',
+  },
+  fontFamilyDescription: {
+    fontSize: getResponsiveSize(12, 13, 14, 15, 16),
+    fontWeight: '400',
+  },
+  fontFamilyArrow: {
+    fontSize: getResponsiveSize(12, 13, 14, 15, 16),
+    fontWeight: '500',
+    paddingLeft: getResponsiveSpacing(8),
   },
 }); 

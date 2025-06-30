@@ -181,21 +181,163 @@ const FONT_SIZES: FontSizeOption[] = [
   { id: 'huge', name: 'Huge', size: 32, description: 'Maximum impact' },
 ];
 
-// Font families
+// Font families with cross-platform support
 interface FontFamilyOption {
   id: string;
   name: string;
   family: string;
   weight: '400' | '500' | '600' | '700' | '800';
   description: string;
+  category: 'serif' | 'sans-serif' | 'monospace' | 'display' | 'handwriting';
 }
 
+// Cross-platform font families - ensuring no undefined values
 const FONT_FAMILIES: FontFamilyOption[] = [
-  { id: 'regular', name: 'Regular', family: 'Inter-Regular', weight: '400', description: 'Clean and readable' },
-  { id: 'medium', name: 'Medium', family: 'Inter-Medium', weight: '500', description: 'Slightly bold' },
-  { id: 'semiBold', name: 'Semi Bold', family: 'Inter-SemiBold', weight: '600', description: 'Strong emphasis' },
-  { id: 'bold', name: 'Bold', family: 'Inter-Bold', weight: '700', description: 'Bold and impactful' },
-  { id: 'extraBold', name: 'Extra Bold', family: 'Inter-ExtraBold', weight: '800', description: 'Maximum boldness' },
+  // Sans-serif fonts
+  { 
+    id: 'system', 
+    name: 'System', 
+    family: Platform.OS === 'ios' ? 'System' : 'sans-serif', 
+    weight: '400', 
+    description: 'Default system font',
+    category: 'sans-serif'
+  },
+  { 
+    id: 'arial', 
+    name: 'Arial', 
+    family: Platform.OS === 'ios' ? 'Arial' : 'sans-serif', 
+    weight: '400', 
+    description: 'Classic, versatile font',
+    category: 'sans-serif'
+  },
+  { 
+    id: 'helvetica', 
+    name: 'Helvetica', 
+    family: Platform.OS === 'ios' ? 'Helvetica' : 'sans-serif', 
+    weight: '400', 
+    description: 'Clean and modern',
+    category: 'sans-serif'
+  },
+  { 
+    id: 'verdana', 
+    name: 'Verdana', 
+    family: Platform.OS === 'ios' ? 'Verdana' : 'sans-serif', 
+    weight: '400', 
+    description: 'Highly readable',
+    category: 'sans-serif'
+  },
+  { 
+    id: 'trebuchet', 
+    name: 'Trebuchet MS', 
+    family: Platform.OS === 'ios' ? 'Trebuchet MS' : 'sans-serif', 
+    weight: '400', 
+    description: 'Friendly and approachable',
+    category: 'sans-serif'
+  },
+  
+  // Serif fonts
+  { 
+    id: 'timesNewRoman', 
+    name: 'Times New Roman', 
+    family: Platform.OS === 'ios' ? 'Times New Roman' : 'serif', 
+    weight: '400', 
+    description: 'Traditional serif font',
+    category: 'serif'
+  },
+  { 
+    id: 'georgia', 
+    name: 'Georgia', 
+    family: Platform.OS === 'ios' ? 'Georgia' : 'serif', 
+    weight: '400', 
+    description: 'Elegant serif font',
+    category: 'serif'
+  },
+  { 
+    id: 'palatino', 
+    name: 'Palatino', 
+    family: Platform.OS === 'ios' ? 'Palatino' : 'serif', 
+    weight: '400', 
+    description: 'Classic serif style',
+    category: 'serif'
+  },
+  
+  // Monospace fonts
+  { 
+    id: 'courier', 
+    name: 'Courier', 
+    family: Platform.OS === 'ios' ? 'Courier' : 'monospace', 
+    weight: '400', 
+    description: 'Fixed-width font',
+    category: 'monospace'
+  },
+  { 
+    id: 'courierNew', 
+    name: 'Courier New', 
+    family: Platform.OS === 'ios' ? 'Courier New' : 'monospace', 
+    weight: '400', 
+    description: 'Modern monospace',
+    category: 'monospace'
+  },
+  { 
+    id: 'menlo', 
+    name: 'Menlo', 
+    family: Platform.OS === 'ios' ? 'Menlo' : 'monospace', 
+    weight: '400', 
+    description: 'Developer favorite',
+    category: 'monospace'
+  },
+  
+  // Display fonts
+  { 
+    id: 'impact', 
+    name: 'Impact', 
+    family: Platform.OS === 'ios' ? 'Impact' : 'sans-serif', 
+    weight: '700', 
+    description: 'Bold and striking',
+    category: 'display'
+  },
+  { 
+    id: 'americanTypewriter', 
+    name: 'American Typewriter', 
+    family: Platform.OS === 'ios' ? 'American Typewriter' : 'serif', 
+    weight: '400', 
+    description: 'Vintage typewriter style',
+    category: 'display'
+  },
+  { 
+    id: 'copperplate', 
+    name: 'Copperplate', 
+    family: Platform.OS === 'ios' ? 'Copperplate' : 'sans-serif', 
+    weight: '400', 
+    description: 'Elegant all-caps style',
+    category: 'display'
+  },
+  
+  // Handwriting fonts
+  { 
+    id: 'zapfino', 
+    name: 'Zapfino', 
+    family: Platform.OS === 'ios' ? 'Zapfino' : 'cursive', 
+    weight: '400', 
+    description: 'Elegant script font',
+    category: 'handwriting'
+  },
+  { 
+    id: 'snellRoundhand', 
+    name: 'Snell Roundhand', 
+    family: Platform.OS === 'ios' ? 'Snell Roundhand' : 'cursive', 
+    weight: '400', 
+    description: 'Classic handwriting',
+    category: 'handwriting'
+  },
+  { 
+    id: 'markerFelt', 
+    name: 'Marker Felt', 
+    family: Platform.OS === 'ios' ? 'Marker Felt' : 'fantasy', 
+    weight: '400', 
+    description: 'Casual marker style',
+    category: 'handwriting'
+  },
 ];
 
 // Text style interface
@@ -231,25 +373,33 @@ export function TextStylePickerModal({
     keyboardType: currentStyle.keyboardType || 'default',
     color: currentStyle.color || '#FFFFFF',
     fontSize: currentStyle.fontSize || 24,
-    fontFamily: currentStyle.fontFamily || 'Inter',
+    fontFamily: currentStyle.fontFamily || (Platform.OS === 'ios' ? 'System' : 'sans-serif'), // Safe default
     fontWeight: currentStyle.fontWeight || '600',
     textAlign: currentStyle.textAlign || 'center',
     fontStyle: currentStyle.fontStyle || 'normal',
     textDecorationLine: currentStyle.textDecorationLine || 'none',
   });
 
-  const [activeSection, setActiveSection] = useState<'keyboard' | 'color' | 'size' | 'font' | 'format'>('color');
+  const [activeSection, setActiveSection] = useState<'keyboard' | 'color' | 'size' | 'font' | 'format'>('font');
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [customColor, setCustomColor] = useState(currentStyle.color || '#FFFFFF');
+  const [showFontDropdown, setShowFontDropdown] = useState(true); // Auto-open font dropdown
+  const [selectedFontCategory, setSelectedFontCategory] = useState<'all' | 'serif' | 'sans-serif' | 'monospace' | 'display' | 'handwriting'>('all');
 
   // Animation values
   const headerOpacity = useSharedValue(0);
   const contentOpacity = useSharedValue(0);
   const buttonScale = useSharedValue(1);
 
-  // Initialize animations
+  // Initialize animations and reset state
   useEffect(() => {
     if (visible) {
+      // Reset to initial state when modal opens
+      setShowFontDropdown(true);
+      setSelectedFontCategory('all');
+      setShowColorPicker(false);
+      
+      // Animate in
       headerOpacity.value = withDelay(100, withTiming(1, { duration: 400 }));
       contentOpacity.value = withDelay(200, withTiming(1, { duration: 400 }));
     } else {
@@ -265,8 +415,10 @@ export function TextStylePickerModal({
       buttonScale.value = withSpring(1, { duration: 200 });
     }, 100);
 
+    // Close font dropdown and apply changes
+    setShowFontDropdown(false);
     onApply(selectedStyle);
-  }, [selectedStyle, onApply, buttonScale]);
+  }, [selectedStyle, onApply, buttonScale, setShowFontDropdown]);
 
   // Animated styles
   const headerAnimatedStyle = useAnimatedStyle(() => ({
@@ -350,11 +502,11 @@ export function TextStylePickerModal({
               {/* Preview */}
               <View style={[styles.previewContainer, { backgroundColor: theme.surface }]}>
                 <Text style={[styles.previewLabel, { color: theme.textSecondary }]}>
-                  Preview
+                  Live Preview
                 </Text>
                 <View style={[styles.previewBox, { backgroundColor: theme.background }]}>
                   <Text style={[styles.previewText, getPreviewStyle()]} numberOfLines={2}>
-                    Event Title Sample Text
+                    Event Title Preview
                   </Text>
                 </View>
               </View>
@@ -458,6 +610,134 @@ export function TextStylePickerModal({
                     ))}
                   </View>
                 </View>
+              </View>
+
+              {/* Font Family with Dropdown */}
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                  Choose Font Style
+                </Text>
+                
+                {/* Current Font Display */}
+                <TouchableOpacity
+                  style={[styles.fontDropdownTrigger, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                  onPress={() => setShowFontDropdown(!showFontDropdown)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.fontDropdownContent}>
+                    <View style={[styles.fontPreviewContainer, { backgroundColor: `${theme.primary}20` }]}>
+                      <Text style={[
+                        styles.fontPreviewText,
+                        {
+                          color: theme.primary,
+                          fontFamily: selectedStyle.fontFamily,
+                          fontWeight: selectedStyle.fontWeight
+                        }
+                      ]}>
+                        Aa
+                      </Text>
+                    </View>
+                    <View style={styles.fontInfo}>
+                      <Text style={[styles.selectedFontName, { color: theme.text }]} numberOfLines={1}>
+                        {FONT_FAMILIES.find(f => f.family === selectedStyle.fontFamily)?.name || 'System'}
+                      </Text>
+                      <Text style={[styles.selectedFontDescription, { color: theme.textSecondary }]} numberOfLines={1}>
+                        {FONT_FAMILIES.find(f => f.family === selectedStyle.fontFamily)?.description || 'Choose from 17 font styles'}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={[styles.dropdownArrow, { transform: [{ rotate: showFontDropdown ? '180deg' : '0deg' }] }]}>
+                    <Text style={[styles.dropdownArrowText, { color: theme.textSecondary }]}>▼</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Font Dropdown */}
+                {showFontDropdown && (
+                  <View style={styles.fontDropdownOverlay} pointerEvents="box-none">
+                    <View style={[styles.fontDropdown, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                      {/* Category Filter */}
+                      <View style={styles.fontCategories}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesScrollContent}>
+                          {['all', 'sans-serif', 'serif', 'monospace', 'display', 'handwriting'].map((category) => (
+                            <TouchableOpacity
+                              key={category}
+                              style={[
+                                styles.categoryChip,
+                                {
+                                  backgroundColor: selectedFontCategory === category ? theme.primary : theme.border + '40',
+                                  borderColor: selectedFontCategory === category ? theme.primary : theme.border,
+                                }
+                              ]}
+                              onPress={() => setSelectedFontCategory(category as any)}
+                            >
+                              <Text style={[
+                                styles.categoryChipText,
+                                { color: selectedFontCategory === category ? '#FFFFFF' : theme.text }
+                              ]}>
+                                {category.charAt(0).toUpperCase() + category.slice(1).replace('-', ' ')}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </View>
+
+                      {/* Font List */}
+                      <ScrollView style={styles.fontList} showsVerticalScrollIndicator={false}>
+                        {FONT_FAMILIES
+                          .filter(font => selectedFontCategory === 'all' || font.category === selectedFontCategory)
+                          .map((fontFamily) => (
+                          <TouchableOpacity
+                            key={fontFamily.id}
+                            style={[
+                              styles.fontOption,
+                              {
+                                backgroundColor: selectedStyle.fontFamily === fontFamily.family ? `${theme.primary}20` : 'transparent',
+                                borderColor: selectedStyle.fontFamily === fontFamily.family ? theme.primary : 'transparent',
+                              }
+                            ]}
+                            onPress={() => {
+                              setSelectedStyle(prev => ({ ...prev, fontFamily: fontFamily.family }));
+                              setShowFontDropdown(false);
+                            }}
+                            activeOpacity={0.7}
+                          >
+                            <View style={styles.fontOptionContent}>
+                              <View style={[styles.fontOptionPreview, { backgroundColor: `${theme.primary}15` }]}>
+                                <Text style={[
+                                  styles.fontOptionPreviewText,
+                                  {
+                                    color: theme.primary,
+                                    fontFamily: fontFamily.family,
+                                    fontWeight: fontFamily.weight
+                                  }
+                                ]}>
+                                  Aa
+                                </Text>
+                              </View>
+                              <View style={styles.fontOptionInfo}>
+                                <Text style={[styles.fontOptionName, { color: theme.text }]} numberOfLines={1}>
+                                  {fontFamily.name}
+                                </Text>
+                                <Text style={[styles.fontOptionDescription, { color: theme.textSecondary }]} numberOfLines={1}>
+                                  {fontFamily.description}
+                                </Text>
+                                <Text style={[styles.fontOptionCategory, { color: theme.textSecondary }]} numberOfLines={1}>
+                                  {fontFamily.category.charAt(0).toUpperCase() + fontFamily.category.slice(1).replace('-', ' ')}
+                                </Text>
+                              </View>
+                            </View>
+                            
+                            {selectedStyle.fontFamily === fontFamily.family && (
+                              <View style={[styles.fontSelectedIndicator, { backgroundColor: theme.primary }]}>
+                                <Check size={scale(14)} color="#FFFFFF" strokeWidth={2.5} />
+                              </View>
+                            )}
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  </View>
+                )}
               </View>
 
               {/* Keyboard Type */}
@@ -648,55 +928,6 @@ export function TextStylePickerModal({
                 </View>
               </View>
 
-              {/* Font Style */}
-              <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                  Font Style
-                </Text>
-                <View style={styles.optionsGrid}>
-                  {FONT_FAMILIES.map((fontFamily) => (
-                    <TouchableOpacity
-                      key={fontFamily.id}
-                      style={[
-                        styles.optionItem,
-                        {
-                          backgroundColor: theme.surface,
-                          borderColor: selectedStyle.fontFamily === fontFamily.family ? theme.primary : 'transparent',
-                          borderWidth: selectedStyle.fontFamily === fontFamily.family ? 2 : 0,
-                        }
-                      ]}
-                      onPress={() => setSelectedStyle(prev => ({ ...prev, fontFamily: fontFamily.family }))}
-                      activeOpacity={0.8}
-                    >
-                      <View style={[styles.fontStylePreview, { backgroundColor: `${theme.primary}20` }]}>
-                        <Text style={[
-                          styles.fontStyleText, 
-                          { 
-                            color: theme.primary,
-                            fontFamily: fontFamily.family,
-                            fontWeight: fontFamily.weight
-                          }
-                        ]}>
-                          Aa
-                        </Text>
-                      </View>
-                      <Text style={[styles.optionName, { color: theme.text }]} numberOfLines={1}>
-                        {fontFamily.name}
-                      </Text>
-                      <Text style={[styles.optionDescription, { color: theme.textSecondary }]} numberOfLines={1}>
-                        {fontFamily.description}
-                      </Text>
-                      
-                      {selectedStyle.fontFamily === fontFamily.family && (
-                        <View style={[styles.selectedIndicator, { backgroundColor: theme.primary }]}>
-                          <Check size={scale(12)} color="#FFFFFF" strokeWidth={3} />
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
               {/* Text Alignment */}
               <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: theme.text }]}>
@@ -793,53 +1024,7 @@ export function TextStylePickerModal({
                 </View>
               </View>
 
-              {/* Font Style */}
-              <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                  Font Style
-                </Text>
-                <View style={styles.optionsGrid}>
-                  {['normal', 'italic'].map((style) => (
-                    <TouchableOpacity
-                      key={style}
-                      style={[
-                        styles.optionItem,
-                        {
-                          backgroundColor: theme.surface,
-                          borderColor: selectedStyle.fontStyle === style ? theme.primary : 'transparent',
-                          borderWidth: selectedStyle.fontStyle === style ? 2 : 0,
-                        }
-                      ]}
-                      onPress={() => setSelectedStyle(prev => ({ ...prev, fontStyle: style as 'normal' | 'italic' }))}
-                      activeOpacity={0.8}
-                    >
-                      <View style={[styles.fontStylePreview, { backgroundColor: `${theme.primary}20` }]}>
-                        <Text style={[
-                          styles.fontStyleText, 
-                          { 
-                            color: theme.primary,
-                            fontStyle: selectedStyle.fontStyle === style ? 'italic' : 'normal'
-                          }
-                        ]}>
-                          Aa
-                        </Text>
-                      </View>
-                      <Text style={[styles.optionName, { color: theme.text }]} numberOfLines={1}>
-                        {style.charAt(0).toUpperCase() + style.slice(1)}
-                      </Text>
-                      <Text style={[styles.optionDescription, { color: theme.textSecondary }]} numberOfLines={1}>
-                        {style.charAt(0).toUpperCase() + style.slice(1)}
-                      </Text>
-                      
-                      {selectedStyle.fontStyle === style && (
-                        <View style={[styles.selectedIndicator, { backgroundColor: theme.primary }]}>
-                          <Check size={scale(12)} color="#FFFFFF" strokeWidth={3} />
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
+
 
               {/* Text Decoration */}
               <View style={styles.section}>
@@ -1101,17 +1286,7 @@ const styles = StyleSheet.create({
   fontSizeText: {
     fontWeight: '600',
   },
-  fontStylePreview: {
-    width: scale(deviceCategory === 'extraSmall' ? 36 : 40),
-    height: scale(deviceCategory === 'extraSmall' ? 36 : 40),
-    borderRadius: scale(deviceCategory === 'extraSmall' ? 18 : 20),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: verticalScale(getResponsiveSpacing(8)),
-  },
-  fontStyleText: {
-    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 16 : 18),
-  },
+
 
   // Text Alignment Previews - Responsive
   textAlignPreview: {
@@ -1286,5 +1461,170 @@ const styles = StyleSheet.create({
     gap: scale(getResponsiveSpacing(4)),
     borderRadius: scale(deviceCategory === 'extraSmall' ? 8 : 10),
     overflow: 'hidden',
+  },
+
+  // Font Dropdown Styles - Responsive
+  fontDropdownTrigger: {
+    marginHorizontal: scale(getResponsiveSpacing(16)),
+    borderRadius: scale(16),
+    padding: scale(getResponsiveSpacing(16)),
+    marginBottom: verticalScale(getResponsiveSpacing(16)),
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: verticalScale(deviceCategory === 'extraSmall' ? 70 : 80),
+    elevation: Platform.OS === 'android' ? 2 : 0,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+      },
+    }),
+  },
+  fontDropdownContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(getResponsiveSpacing(12)),
+  },
+  fontPreviewContainer: {
+    width: scale(deviceCategory === 'extraSmall' ? 48 : 56),
+    height: scale(deviceCategory === 'extraSmall' ? 48 : 56),
+    borderRadius: scale(deviceCategory === 'extraSmall' ? 24 : 28),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fontPreviewText: {
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 18 : 22),
+    fontWeight: '600',
+  },
+  fontInfo: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: verticalScale(getResponsiveSpacing(2)),
+  },
+  selectedFontName: {
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 16 : 17),
+    fontWeight: '600',
+  },
+  selectedFontDescription: {
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 13 : 14),
+    fontWeight: '400',
+  },
+  dropdownArrow: {
+    padding: scale(getResponsiveSpacing(4)),
+  },
+  dropdownArrowText: {
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 12 : 14),
+    fontWeight: '500',
+  },
+  fontDropdownOverlay: {
+    position: 'absolute',
+    top: verticalScale(deviceCategory === 'extraSmall' ? 240 : 260),
+    left: 0,
+    right: 0,
+    zIndex: 999,
+    paddingHorizontal: scale(getResponsiveSpacing(16)),
+  },
+  fontDropdown: {
+    borderWidth: 1,
+    borderRadius: scale(16),
+    paddingVertical: verticalScale(getResponsiveSpacing(8)),
+    maxHeight: verticalScale(deviceCategory === 'extraSmall' ? 280 : 320),
+    overflow: 'hidden',
+    elevation: Platform.OS === 'android' ? 8 : 0,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+      },
+    }),
+  },
+  fontCategories: {
+    paddingVertical: verticalScale(getResponsiveSpacing(12)),
+    paddingHorizontal: scale(getResponsiveSpacing(16)),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(60, 60, 67, 0.29)',
+  },
+  categoriesScrollContent: {
+    gap: scale(getResponsiveSpacing(8)),
+    paddingRight: scale(getResponsiveSpacing(16)),
+  },
+  categoryChip: {
+    paddingHorizontal: scale(getResponsiveSpacing(12)),
+    paddingVertical: verticalScale(getResponsiveSpacing(6)),
+    borderRadius: scale(16),
+    borderWidth: 1,
+    minWidth: scale(deviceCategory === 'extraSmall' ? 60 : 70),
+    alignItems: 'center',
+  },
+  categoryChipText: {
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 12 : 13),
+    fontWeight: '500',
+  },
+  fontList: {
+    maxHeight: verticalScale(deviceCategory === 'extraSmall' ? 220 : 250),
+  },
+  fontOption: {
+    paddingHorizontal: scale(getResponsiveSpacing(16)),
+    paddingVertical: verticalScale(getResponsiveSpacing(12)),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(60, 60, 67, 0.29)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: verticalScale(deviceCategory === 'extraSmall' ? 80 : 90),
+    borderWidth: 1,
+    borderRadius: scale(12),
+    marginHorizontal: scale(getResponsiveSpacing(8)),
+    marginVertical: verticalScale(getResponsiveSpacing(4)),
+  },
+  fontOptionContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(getResponsiveSpacing(12)),
+  },
+  fontOptionPreview: {
+    width: scale(deviceCategory === 'extraSmall' ? 40 : 48),
+    height: scale(deviceCategory === 'extraSmall' ? 40 : 48),
+    borderRadius: scale(deviceCategory === 'extraSmall' ? 20 : 24),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fontOptionPreviewText: {
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 16 : 18),
+    fontWeight: '600',
+  },
+  fontOptionInfo: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: verticalScale(getResponsiveSpacing(2)),
+  },
+  fontOptionName: {
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 15 : 16),
+    fontWeight: '600',
+  },
+  fontOptionDescription: {
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 12 : 13),
+    fontWeight: '400',
+  },
+  fontOptionCategory: {
+    fontSize: moderateScale(deviceCategory === 'extraSmall' ? 11 : 12),
+    fontWeight: '400',
+    fontStyle: 'italic',
+  },
+  fontSelectedIndicator: {
+    width: scale(deviceCategory === 'extraSmall' ? 24 : 28),
+    height: scale(deviceCategory === 'extraSmall' ? 24 : 28),
+    borderRadius: scale(deviceCategory === 'extraSmall' ? 12 : 14),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: scale(getResponsiveSpacing(8)),
   },
 }); 
