@@ -137,6 +137,63 @@ const getFontFamily = (baseFamily: string, fontWeight: string, fontStyle: string
   return baseFamily;
 };
 
+// Import all invitation background images
+const backgroundImages = {
+  blackGreenWatercolor: require('@/assets/images/invites/_Black and Green Watercolor Phone Wallpaper.png'),
+  beigeGoldMinimalist: require('@/assets/images/invites/Beige Gold Aesthetic Minimalist Phone Wallpaper.png'),
+  beigePinkFlowers: require('@/assets/images/invites/Beige Pink Illustrated Flowers and Leaves Phone Wallpaper .png'),
+  blackGoldBrush: require('@/assets/images/invites/Black and Gold Glitter Brush Stroke Phone Wallpaper.png'),
+  blackGoldDrops: require('@/assets/images/invites/Black and Gold Glitter Drops Phone Wallpaper.png'),
+  blackGoldGlossy: require('@/assets/images/invites/Black and Gold Glossy Phone Wallpaper.png'),
+  blackWhiteStarry: require('@/assets/images/invites/Black And White Illustrated Starry Sky Phone Wallpaper.png'),
+  blackBlueGoldLuxury: require('@/assets/images/invites/Black Dark Blue Gold Luxury Phone Wallpaper.png'),
+  blackMinimalistQuotes: require('@/assets/images/invites/Black Minimalist Quotes Phone Wallpaper.png'),
+  blackPinkBold: require('@/assets/images/invites/Black Pink Bold 3D Phone Wallpaper.png'),
+  blueAbstractNight: require('@/assets/images/invites/Blue Abstract Night Star Phone Wallpaper.png'),
+  blueSilverY2K: require('@/assets/images/invites/Blue and Silver Aesthetic Y2K Futuristic Love Phone Wallpaper .png'),
+  blueGoldMarble: require('@/assets/images/invites/Blue Gold Minimalist Marble Background Phone Wallpaper.png'),
+  colorfulGirlyCollage: require('@/assets/images/invites/Colorful Girly Aesthetic Collage Phone Wallpaper.png'),
+  colorfulTropicalFlowers: require('@/assets/images/invites/Colorful Illustrative Tropical Flowers Phone Wallpaper.png'),
+  colorfulWatercolor: require('@/assets/images/invites/Colorful Watercolor Illustrations Phone Wallpaper.png'),
+  creamPinkBows: require('@/assets/images/invites/Cream and Pink Watercolor Gentle Illustrative Bows Background Wallpaper Phone Wallpaper.png'),
+  creamGreenIllustrative: require('@/assets/images/invites/Cream Green Illustrative Phone Wallpaper.png'),
+  creamVintageStorms: require('@/assets/images/invites/Cream Vintage Art Aesthetic Storms Christian Phone Wallpaper.png'),
+  dustyBlueFloral: require('@/assets/images/invites/Dusty Blue Cream Motivational Floral Vintage Phone Wallpaper.png'),
+  floralWatercolorGarden: require('@/assets/images/invites/Floral Watercolor Garden Phone Wallpaper.png'),
+  iridescentY2K: require('@/assets/images/invites/Iridescent Y2K Metallic Liquid Wavy Letters Positive Quote Phone Wallpaper.png'),
+  navyYellowNight: require('@/assets/images/invites/Navy Yellow Cute Night Sky Phone Wallpaper .png'),
+  pinkPurpleFlowers: require('@/assets/images/invites/Pink and Purple Realistic Watercolor Flower Blossom Phone Wallpaper.png'),
+  pinkRedStrawberries: require('@/assets/images/invites/Pink and Red Watercolor Strawberries Pattern Phone Wallpaper.png'),
+  pinkGradientHologram: require('@/assets/images/invites/Pink Gradient Modern Hologram Phone Wallpaper.png'),
+  silkyGlowingBubble: require('@/assets/images/invites/Silky Glowing 3d Bubble Xoxo Phone Wallpaper.png'),
+  whitePurplePlayful: require('@/assets/images/invites/White and Purple Playful Phone Wallpaper.png'),
+  winterSnowyForest: require('@/assets/images/invites/Winter Snowy Forest Magic in the Air Quote Phone Wallpaper.png'),
+  yellowGreenNature: require('@/assets/images/invites/Yellow and Green Watercolor Illustration Nature View Phone Wallpaper.png'),
+  yellowWhiteGreenFlower: require('@/assets/images/invites/Yellow White and Green Aesthetic Flower Wallpaper Phone .png'),
+};
+
+// Helper function to get background image source from background ID
+const getBackgroundImageSource = (backgroundId: string | null) => {
+  if (!backgroundId) return null;
+  
+  // Handle new background format (background_imageKey)
+  if (backgroundId.startsWith('background_')) {
+    const imageKey = backgroundId.replace('background_', '');
+    return backgroundImages[imageKey as keyof typeof backgroundImages] || null;
+  }
+  
+  // Handle legacy formats for backward compatibility
+  if (backgroundId.startsWith('#')) {
+    return backgroundId; // Color
+  }
+  
+  if (backgroundId.startsWith('http')) {
+    return { uri: backgroundId }; // URL
+  }
+  
+  return null;
+};
+
 export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEventScreenProps) {
   const { theme, isDark } = useTheme();
   
@@ -166,8 +223,8 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showEventDetails, setShowEventDetails] = useState(false);
   const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
-
   const [showTitleInput, setShowTitleInput] = useState(false);
+  const [showInvitationPreview, setShowInvitationPreview] = useState(false);
 
   // Animation values
   const headerOpacity = useSharedValue(0);
@@ -286,8 +343,6 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
     setShowBackgroundPicker(false);
   };
 
-
-
   const formatDateTime = () => {
     if (!eventData.date) return 'Date and Time';
     
@@ -347,33 +402,8 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
     );
   };
 
-  const fillDemoData = () => {
-    const demoDate = new Date();
-    demoDate.setDate(demoDate.getDate() + 7);
-    const demoTime = new Date();
-    demoTime.setHours(19, 0, 0, 0);
-    
-    setEventData({
-      title: "Sarah's Birthday Party",
-      date: demoDate,
-      time: demoTime,
-      location: "123 Party Street, New York, NY",
-      locationName: "Central Park Pavilion",
-      description: "Join us for an amazing birthday celebration with music, food, and great company! Bring your dancing shoes!",
-      hostName: "Joshua Smith",
-      backgroundImage: null,
-      titleStyle: {
-        color: isDark ? '#FFFFFF' : '#000000',
-        fontSize: 20,
-        fontFamily: 'Inter-Bold',
-        fontWeight: '700',
-        textAlign: 'center',
-        fontStyle: 'normal',
-        textDecorationLine: 'none',
-      },
-    });
-    
-    Alert.alert('Demo Data Loaded! 🎉', 'All fields have been filled with sample data. You can now test the Create Event functionality.');
+  const handlePreviewPress = () => {
+    setShowInvitationPreview(true);
   };
 
   // Dynamic styles based on theme
@@ -406,46 +436,61 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
         
         {/* Background Pattern/Texture */}
         <View style={styles.backgroundContainer}>
-          {eventData.backgroundImage ? (
-            <>
-              {eventData.backgroundImage.startsWith('#') ? (
-                // Color background (emoji backgrounds)
+          {(() => {
+            const backgroundSource = getBackgroundImageSource(eventData.backgroundImage);
+            
+            if (backgroundSource) {
+              if (typeof backgroundSource === 'string' && backgroundSource.startsWith('#')) {
+                // Color background (legacy support)
+                return (
+                  <>
+                    <LinearGradient
+                      colors={[
+                        backgroundSource, 
+                        backgroundSource + 'E6', // 90% opacity
+                        backgroundSource + 'CC'  // 80% opacity
+                      ]}
+                      style={styles.gradientBackground}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    />
+                    <View style={[
+                      styles.backgroundOverlay, 
+                      { backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.2)' }
+                    ]} />
+                  </>
+                );
+              } else {
+                // Image background (from invites folder or URL)
+                return (
+                  <>
+                    <Image
+                      source={backgroundSource}
+                      style={styles.backgroundImage}
+                      resizeMode="cover"
+                    />
+                    <View style={[
+                      styles.backgroundOverlay, 
+                      { backgroundColor: isDark ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.15)' }
+                    ]} />
+                  </>
+                );
+              }
+            } else {
+              // Default gradient when no background is selected
+              return (
                 <LinearGradient
-                  colors={[
-                    eventData.backgroundImage, 
-                    eventData.backgroundImage + 'E6', // 90% opacity
-                    eventData.backgroundImage + 'CC'  // 80% opacity
-                  ]}
+                  colors={isDark 
+                    ? [theme.background, theme.surface, theme.background]
+                    : [theme.background, theme.surface, theme.background]
+                  }
                   style={styles.gradientBackground}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 />
-              ) : (
-                // Image background (photographic or custom)
-                <Image
-                  source={{ uri: eventData.backgroundImage }}
-                  style={styles.backgroundImage}
-                  resizeMode="cover"
-                />
-              )}
-              {/* Semi-transparent overlay to ensure content readability */}
-              <View style={[
-                styles.backgroundOverlay, 
-                { backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.2)' }
-              ]} />
-            </>
-          ) : (
-            // Default gradient when no background is selected
-            <LinearGradient
-              colors={isDark 
-                ? [theme.background, theme.surface, theme.background]
-                : [theme.background, theme.surface, theme.background]
-              }
-              style={styles.gradientBackground}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            />
-          )}
+              );
+            }
+          })()}
         </View>
 
         <SafeAreaView style={styles.safeArea}>
@@ -467,9 +512,9 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
             
             <TouchableOpacity 
               style={[styles.demoButton, { backgroundColor: theme.primary }]}
-              onPress={fillDemoData}
+              onPress={handlePreviewPress}
             >
-              <Text style={styles.demoButtonText}>Fill Demo</Text>
+              <Text style={styles.demoButtonText}>Preview</Text>
             </TouchableOpacity>
           </Animated.View>
 
@@ -961,8 +1006,6 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
                     </View>
                   </View>
 
-
-
                 </ScrollView>
               </View>
             </SafeAreaView>
@@ -1001,7 +1044,260 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
           currentBackground={eventData.backgroundImage}
         />
 
+        <Modal
+          visible={showInvitationPreview}
+          animationType="slide"
+          presentationStyle="fullScreen"
+        >
+          <View style={[styles.invitationPreviewContainer, dynamicStyles.container]}>
+            <StatusBar 
+              barStyle={eventData.backgroundImage ? "light-content" : (isDark ? "light-content" : "dark-content")} 
+              backgroundColor="transparent" 
+              translucent 
+            />
+            
+            {/* Background */}
+            <View style={styles.backgroundContainer}>
+              {(() => {
+                const backgroundSource = getBackgroundImageSource(eventData.backgroundImage);
+                
+                if (backgroundSource) {
+                  if (typeof backgroundSource === 'string' && backgroundSource.startsWith('#')) {
+                    // Color background (legacy support)
+                    return (
+                      <>
+                        <LinearGradient
+                          colors={[
+                            backgroundSource, 
+                            backgroundSource + 'F0',
+                            backgroundSource + 'E6'
+                          ]}
+                          style={styles.gradientBackground}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                        />
+                        <View style={[
+                          styles.backgroundOverlay, 
+                          { backgroundColor: isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.25)' }
+                        ]} />
+                      </>
+                    );
+                  } else {
+                    // Image background (from invites folder or URL)
+                    return (
+                      <>
+                        <Image
+                          source={backgroundSource}
+                          style={styles.backgroundImage}
+                          resizeMode="cover"
+                        />
+                        <View style={[
+                          styles.backgroundOverlay, 
+                          { backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.2)' }
+                        ]} />
+                      </>
+                    );
+                  }
+                } else {
+                  // Default elegant gradient for preview
+                  return (
+                    <LinearGradient
+                      colors={isDark 
+                        ? ['#1a1a2e', '#16213e', '#0f3460']
+                        : ['#667eea', '#764ba2', '#f093fb']
+                      }
+                      style={styles.gradientBackground}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    />
+                  );
+                }
+              })()}
+            </View>
 
+            <SafeAreaView style={styles.invitationSafeArea}>
+              {/* Header */}
+              <View style={styles.invitationHeader}>
+                <TouchableOpacity 
+                  onPress={() => setShowInvitationPreview(false)} 
+                  style={[styles.invitationCloseButton, dynamicStyles.glassSurface]}
+                >
+                  <X size={getResponsiveSize(18, 20, 22, 24, 26)} color={theme.text} strokeWidth={2} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Main Invitation Card */}
+              <ScrollView 
+                style={styles.invitationScroll} 
+                contentContainerStyle={styles.invitationScrollContent}
+                showsVerticalScrollIndicator={false}
+                bounces={true}
+              >
+                <View style={styles.invitationCard}>
+                  {/* Invitation Header */}
+                  <View style={[styles.invitationCardHeader, dynamicStyles.glassSurface]}>
+                    <Text style={styles.invitationLabel}>You're Invited!</Text>
+                    
+                    {/* Event Title */}
+                    <Text style={[
+                      styles.invitationEventTitle,
+                      {
+                        color: eventData.title ? eventData.titleStyle.color : theme.text,
+                        fontSize: moderateScale(Math.min(eventData.titleStyle.fontSize * 1.3, 36)),
+                        fontFamily: getFontFamily(
+                          eventData.titleStyle.fontFamily, 
+                          eventData.titleStyle.fontWeight, 
+                          eventData.titleStyle.fontStyle
+                        ),
+                        fontWeight: eventData.titleStyle.fontWeight,
+                        textAlign: eventData.titleStyle.textAlign,
+                        fontStyle: eventData.titleStyle.fontStyle,
+                        textDecorationLine: eventData.titleStyle.textDecorationLine,
+                      }
+                    ]} numberOfLines={3}>
+                      {eventData.title || 'Event Title'}
+                    </Text>
+                  </View>
+
+                  {/* Event Details */}
+                  <View style={[styles.invitationDetailsSection, dynamicStyles.glassSurface]}>
+                    <View style={styles.detailRow}>
+                      <View style={styles.detailIconContainer}>
+                        <Calendar size={getResponsiveSize(20, 22, 24, 26, 28)} color={theme.primary} strokeWidth={2} />
+                      </View>
+                      <View style={styles.detailContent}>
+                        <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Date & Time</Text>
+                        <Text style={[styles.detailValue, { color: theme.text }]}>
+                          {formatDateTime()}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.detailRow}>
+                      <View style={styles.detailIconContainer}>
+                        <MapPin size={getResponsiveSize(20, 22, 24, 26, 28)} color={theme.primary} strokeWidth={2} />
+                      </View>
+                      <View style={styles.detailContent}>
+                        <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Location</Text>
+                        <Text style={[styles.detailValue, { color: theme.text }]} numberOfLines={2}>
+                          {eventData.locationName || eventData.location || 'Location TBD'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Host Information */}
+                  <View style={[styles.invitationHostSection, dynamicStyles.glassSurface]}>
+                    <View style={styles.hostRow}>
+                      <View style={styles.hostAvatarLarge}>
+                        <LinearGradient
+                          colors={[theme.primary, theme.primary + 'CC']}
+                          style={styles.hostAvatarGradient}
+                        >
+                          <Text style={styles.hostAvatarLargeText}>
+                            {eventData.hostName.split(' ').map(n => n[0]).join('')}
+                          </Text>
+                        </LinearGradient>
+                      </View>
+                      <View style={styles.hostDetails}>
+                        <Text style={[styles.hostTitle, { color: theme.textSecondary }]}>Hosted by</Text>
+                        <Text style={[styles.hostNameLarge, { color: theme.text }]}>
+                          {eventData.hostName}
+                        </Text>
+                        {eventData.description && (
+                          <Text style={[styles.hostDescriptionLarge, { color: theme.textSecondary }]} numberOfLines={3}>
+                            {eventData.description}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* RSVP Section */}
+                  <View style={[styles.rsvpSectionMain, dynamicStyles.glassSurface]}>
+                    <Text style={[styles.rsvpQuestion, { color: theme.text }]}>
+                      Will you be attending?
+                    </Text>
+                    
+                    <View style={styles.rsvpButtonsContainer}>
+                      {/* Going Button */}
+                      <TouchableOpacity 
+                        style={[styles.rsvpButtonMain, styles.rsvpButtonGoing]}
+                        activeOpacity={0.8}
+                        disabled
+                      >
+                        <LinearGradient
+                          colors={['#4CAF50', '#45A049']}
+                          style={styles.rsvpButtonGradient}
+                        >
+                          <Check size={getResponsiveSize(18, 20, 22, 24, 26)} color="#FFFFFF" strokeWidth={2.5} />
+                          <Text style={styles.rsvpButtonLabel}>Going</Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                      
+                      {/* Not Going Button */}
+                      <TouchableOpacity 
+                        style={[styles.rsvpButtonMain, styles.rsvpButtonNotGoing]}
+                        activeOpacity={0.8}
+                        disabled
+                      >
+                        <LinearGradient
+                          colors={['#f44336', '#d32f2f']}
+                          style={styles.rsvpButtonGradient}
+                        >
+                          <X size={getResponsiveSize(18, 20, 22, 24, 26)} color="#FFFFFF" strokeWidth={2.5} />
+                          <Text style={styles.rsvpButtonLabel}>Not Going</Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                      
+                      {/* Maybe Button */}
+                      <TouchableOpacity 
+                        style={[styles.rsvpButtonMain, styles.rsvpButtonMaybe]}
+                        activeOpacity={0.8}
+                        disabled
+                      >
+                        <LinearGradient
+                          colors={['#FF9800', '#F57C00']}
+                          style={styles.rsvpButtonGradient}
+                        >
+                          <Text style={[styles.rsvpButtonIcon, { fontSize: getResponsiveSize(16, 18, 20, 22, 24) }]}>?</Text>
+                          <Text style={styles.rsvpButtonLabel}>Maybe</Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </View>
+                    
+                    <Text style={[styles.rsvpNote, { color: theme.textSecondary }]}>
+                      Your response helps the host plan better
+                    </Text>
+                  </View>
+
+                  {/* Invitation Footer */}
+                  <View style={[styles.invitationFooterMain, dynamicStyles.glassSurface]}>
+                    <View style={styles.footerRow}>
+                      <View style={styles.footerAvatarSmall}>
+                        <Text style={[styles.footerAvatarText, { color: theme.primary }]}>
+                          {eventData.hostName.split(' ').map(n => n[0]).join('')}
+                        </Text>
+                      </View>
+                      <Text style={[styles.footerHostText, { color: theme.textSecondary }]}>
+                        Event created by {eventData.hostName.split(' ')[0]}
+                      </Text>
+                    </View>
+                    
+                    <View style={styles.footerDivider} />
+                    
+                    <View style={styles.footerBrand}>
+                      <Text style={[styles.brandText, { color: theme.primary }]}>eventz</Text>
+                      <Text style={[styles.brandTagline, { color: theme.textSecondary }]}>
+                        Making events memorable
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </ScrollView>
+            </SafeAreaView>
+          </View>
+        </Modal>
       </View>
     </Modal>
   );
@@ -1489,5 +1785,235 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveSize(11, 12, 13, 14, 15),
     textAlign: 'center',
     marginTop: getResponsiveSpacing(8),
+  },
+
+  // Invitation Preview Styles
+  invitationPreviewContainer: {
+    flex: 1,
+  },
+  invitationSafeArea: {
+    flex: 1,
+  },
+  invitationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: getResponsiveSpacing(20),
+    paddingTop: getResponsiveSpacing(12),
+    paddingBottom: getResponsiveSpacing(8),
+  },
+  invitationCloseButton: {
+    width: getResponsiveSize(38, 42, 46, 50, 54),
+    height: getResponsiveSize(38, 42, 46, 50, 54),
+    borderRadius: getResponsiveSize(19, 21, 23, 25, 27),
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  invitationScroll: {
+    flex: 1,
+  },
+  invitationScrollContent: {
+    paddingHorizontal: getResponsiveSpacing(20),
+    paddingTop: getResponsiveSpacing(20),
+    paddingBottom: getResponsiveSpacing(40),
+  },
+  invitationCard: {
+    borderRadius: getResponsiveSize(16, 18, 20, 22, 24),
+    padding: getResponsiveSpacing(20),
+    marginBottom: getResponsiveSpacing(20),
+    borderWidth: 1,
+  },
+  invitationCardHeader: {
+    borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
+    padding: getResponsiveSpacing(16),
+    marginBottom: getResponsiveSpacing(16),
+    borderWidth: 1,
+  },
+  invitationLabel: {
+    fontSize: getResponsiveSize(14, 15, 16, 17, 18),
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  invitationEventTitle: {
+    fontSize: getResponsiveSize(16, 17, 18, 19, 20),
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: getResponsiveSpacing(10),
+  },
+  invitationDetailsSection: {
+    borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
+    padding: getResponsiveSpacing(16),
+    marginBottom: getResponsiveSpacing(16),
+    borderWidth: 1,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: getResponsiveSpacing(16),
+    gap: getResponsiveSpacing(12),
+  },
+  detailIconContainer: {
+    width: getResponsiveSize(36, 40, 44, 48, 52),
+    height: getResponsiveSize(36, 40, 44, 48, 52),
+    borderRadius: getResponsiveSize(8, 9, 10, 11, 12),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  detailContent: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: getResponsiveSize(14, 15, 16, 17, 18),
+    fontWeight: '600',
+    marginBottom: getResponsiveSpacing(4),
+  },
+  detailValue: {
+    fontSize: getResponsiveSize(16, 17, 18, 19, 20),
+    fontFamily: 'Inter-Medium',
+  },
+  invitationHostSection: {
+    borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
+    padding: getResponsiveSpacing(16),
+    marginBottom: getResponsiveSpacing(16),
+    borderWidth: 1,
+  },
+  hostRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: getResponsiveSpacing(12),
+  },
+  hostAvatarLarge: {
+    width: getResponsiveSize(48, 52, 56, 60, 64),
+    height: getResponsiveSize(48, 52, 56, 60, 64),
+    borderRadius: getResponsiveSize(24, 26, 28, 30, 32),
+    overflow: 'hidden',
+  },
+  hostAvatarGradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  hostAvatarLargeText: {
+    fontSize: getResponsiveSize(16, 17, 18, 19, 20),
+    fontFamily: 'Inter-Bold',
+  },
+  hostDetails: {
+    flex: 1,
+  },
+  hostTitle: {
+    fontSize: getResponsiveSize(14, 15, 16, 17, 18),
+    fontWeight: '600',
+    marginBottom: getResponsiveSpacing(4),
+  },
+  hostNameLarge: {
+    fontSize: getResponsiveSize(16, 17, 18, 19, 20),
+    fontFamily: 'Inter-SemiBold',
+  },
+  hostDescriptionLarge: {
+    fontSize: getResponsiveSize(14, 15, 16, 17, 18),
+    fontFamily: 'Inter-Regular',
+    lineHeight: getResponsiveSize(20, 22, 24, 26, 28),
+  },
+  rsvpSectionMain: {
+    borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
+    padding: getResponsiveSpacing(16),
+    marginBottom: getResponsiveSpacing(16),
+    borderWidth: 1,
+  },
+  rsvpQuestion: {
+    fontSize: getResponsiveSize(16, 17, 18, 19, 20),
+    fontFamily: 'Inter-SemiBold',
+    textAlign: 'center',
+    marginBottom: getResponsiveSpacing(16),
+  },
+  rsvpButtonsContainer: {
+    flexDirection: 'row',
+    gap: getResponsiveSpacing(12),
+    justifyContent: 'center',
+  },
+  rsvpButtonMain: {
+    flex: 1,
+    paddingVertical: getResponsiveSpacing(12),
+    borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  rsvpButtonGoing: {
+    // Additional styles for going button
+  },
+  rsvpButtonNotGoing: {
+    // Additional styles for not going button
+  },
+  rsvpButtonMaybe: {
+    // Additional styles for maybe button
+  },
+  rsvpButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: getResponsiveSpacing(12),
+    gap: getResponsiveSpacing(8),
+  },
+  rsvpButtonLabel: {
+    fontSize: getResponsiveSize(14, 15, 16, 17, 18),
+    fontFamily: 'Inter-SemiBold',
+    color: '#FFFFFF',
+  },
+  rsvpButtonIcon: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  rsvpNote: {
+    fontSize: getResponsiveSize(12, 13, 14, 15, 16),
+    fontFamily: 'Inter-Regular',
+    textAlign: 'center',
+    marginTop: getResponsiveSpacing(12),
+  },
+  invitationFooterMain: {
+    borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
+    padding: getResponsiveSpacing(16),
+    marginBottom: getResponsiveSpacing(20),
+    borderWidth: 1,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: getResponsiveSpacing(8),
+    marginBottom: getResponsiveSpacing(12),
+  },
+  footerAvatarSmall: {
+    width: getResponsiveSize(24, 26, 28, 30, 32),
+    height: getResponsiveSize(24, 26, 28, 30, 32),
+    borderRadius: getResponsiveSize(12, 13, 14, 15, 16),
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  footerAvatarText: {
+    fontSize: getResponsiveSize(10, 11, 12, 13, 14),
+    fontFamily: 'Inter-Bold',
+  },
+  footerHostText: {
+    fontSize: getResponsiveSize(12, 13, 14, 15, 16),
+    fontFamily: 'Inter-Medium',
+  },
+  footerDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    marginVertical: getResponsiveSpacing(8),
+  },
+  footerBrand: {
+    alignItems: 'center',
+  },
+  brandText: {
+    fontSize: getResponsiveSize(14, 15, 16, 17, 18),
+    fontFamily: 'Inter-Bold',
+    marginBottom: getResponsiveSpacing(4),
+  },
+  brandTagline: {
+    fontSize: getResponsiveSize(12, 13, 14, 15, 16),
+    fontFamily: 'Inter-Regular',
   },
 }); 

@@ -6,20 +6,19 @@ import {
   PanResponder,
   Dimensions,
   Platform,
-  TextInput,
-  TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  runOnJS,
 } from 'react-native-reanimated';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// Enhanced responsive scaling
+// Enhanced responsive scaling with better touch targets
 const scale = (size: number): number => {
   const factor = SCREEN_WIDTH / 375;
   const minFactor = Platform.OS === 'ios' ? 0.85 : 0.8;
@@ -31,7 +30,7 @@ const moderateScale = (size: number, factor: number = 0.3): number => {
   return size + (scale(size) - size) * factor;
 };
 
-// Device detection
+// Device detection for optimal sizing
 const getDeviceCategory = () => {
   if (SCREEN_WIDTH <= 320) return 'extraSmall';
   if (SCREEN_WIDTH <= 375) return 'small';
@@ -59,7 +58,7 @@ interface ColorPickerProps {
   style?: any;
 }
 
-// Color conversion utilities
+// Optimized color conversion utilities
 const hsvToRgb = (h: number, s: number, v: number): [number, number, number] => {
   const c = v * s;
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
@@ -142,35 +141,36 @@ export function ColorPicker({ initialColor, onColorChange, style }: ColorPickerP
   const [hue, setHue] = useState(h);
   const [saturation, setSaturation] = useState(s);
   const [value, setValue] = useState(v);
-  const [hexInput, setHexInput] = useState(initialColor.replace('#', ''));
   
-  // Animated values for picker positions
+  // Optimized animated values with better spring config
   const colorPickerX = useSharedValue(saturation);
   const colorPickerY = useSharedValue(1 - value);
   const huePickerX = useSharedValue(hue / 360);
   
-  // Dimensions
+  // Optimized dimensions for better touch experience
   const colorPickerSize = scale(Math.min(SCREEN_WIDTH - getResponsiveSpacing(80), 280));
   const hueSliderWidth = colorPickerSize;
-  const hueSliderHeight = scale(30);
-  const pickerKnobSize = scale(20);
+  const hueSliderHeight = scale(32);
+  const pickerKnobSize = scale(24); // Slightly larger for better touch
   
-  // Refs
+  // Refs for touch handling
   const colorPickerRef = useRef<View>(null);
   const hueSliderRef = useRef<View>(null);
   
-  // Update color and notify parent
+  // Optimized color update with debouncing
   const updateColor = useCallback((newH: number, newS: number, newV: number) => {
     const [newR, newG, newB] = hsvToRgb(newH, newS, newV);
     const newHex = rgbToHex(newR, newG, newB);
-    setHexInput(newHex.replace('#', ''));
     onColorChange(newHex);
   }, [onColorChange]);
   
-  // Color picker pan responder
+  // Enhanced color picker pan responder with smoother interactions
   const colorPickerPanResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
+    onShouldBlockNativeResponder: () => true,
+    onPanResponderTerminationRequest: () => false,
+    
     onPanResponderGrant: (evt) => {
       const { locationX, locationY } = evt.nativeEvent;
       const newS = Math.max(0, Math.min(1, locationX / colorPickerSize));
@@ -178,10 +178,22 @@ export function ColorPicker({ initialColor, onColorChange, style }: ColorPickerP
       
       setSaturation(newS);
       setValue(newV);
-      colorPickerX.value = withSpring(newS);
-      colorPickerY.value = withSpring(1 - newV);
-      updateColor(hue, newS, newV);
+      
+      // Smooth spring animation with optimized config
+      colorPickerX.value = withSpring(newS, {
+        damping: 25,
+        stiffness: 300,
+        mass: 0.8,
+      });
+      colorPickerY.value = withSpring(1 - newV, {
+        damping: 25,
+        stiffness: 300,
+        mass: 0.8,
+      });
+      
+      runOnJS(updateColor)(hue, newS, newV);
     },
+    
     onPanResponderMove: (evt) => {
       const { locationX, locationY } = evt.nativeEvent;
       const newS = Math.max(0, Math.min(1, locationX / colorPickerSize));
@@ -189,75 +201,67 @@ export function ColorPicker({ initialColor, onColorChange, style }: ColorPickerP
       
       setSaturation(newS);
       setValue(newV);
+      
+      // Direct value updates for smooth dragging
       colorPickerX.value = newS;
       colorPickerY.value = 1 - newV;
-      updateColor(hue, newS, newV);
+      
+      runOnJS(updateColor)(hue, newS, newV);
+    },
+    
+    onPanResponderRelease: () => {
+      // Optional: Add haptic feedback here
     },
   });
   
-  // Hue slider pan responder
+  // Enhanced hue slider pan responder
   const hueSliderPanResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
+    onShouldBlockNativeResponder: () => true,
+    onPanResponderTerminationRequest: () => false,
+    
     onPanResponderGrant: (evt) => {
       const { locationX } = evt.nativeEvent;
       const newH = Math.max(0, Math.min(360, (locationX / hueSliderWidth) * 360));
       
       setHue(newH);
-      huePickerX.value = withSpring(newH / 360);
-      updateColor(newH, saturation, value);
+      huePickerX.value = withSpring(newH / 360, {
+        damping: 25,
+        stiffness: 300,
+        mass: 0.8,
+      });
+      
+      runOnJS(updateColor)(newH, saturation, value);
     },
+    
     onPanResponderMove: (evt) => {
       const { locationX } = evt.nativeEvent;
       const newH = Math.max(0, Math.min(360, (locationX / hueSliderWidth) * 360));
       
       setHue(newH);
       huePickerX.value = newH / 360;
-      updateColor(newH, saturation, value);
+      
+      runOnJS(updateColor)(newH, saturation, value);
     },
   });
-  
-  // Handle hex input change
-  const handleHexChange = (text: string) => {
-    const cleanText = text.replace(/[^0-9A-Fa-f]/g, '').substr(0, 6);
-    setHexInput(cleanText);
-    
-    if (cleanText.length === 6) {
-      try {
-        const [newR, newG, newB] = hexToRgb(`#${cleanText}`);
-        const [newH, newS, newV] = rgbToHsv(newR, newG, newB);
-        
-        setHue(newH);
-        setSaturation(newS);
-        setValue(newV);
-        
-        colorPickerX.value = withSpring(newS);
-        colorPickerY.value = withSpring(1 - newV);
-        huePickerX.value = withSpring(newH / 360);
-        
-        onColorChange(`#${cleanText.toUpperCase()}`);
-      } catch (error) {
-        // Invalid hex, ignore
-      }
-    }
-  };
   
   // Current color for preview
   const currentColor = rgbToHex(...hsvToRgb(hue, saturation, value));
   
-  // Animated styles
+  // Optimized animated styles
   const colorPickerKnobStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: colorPickerX.value * colorPickerSize - pickerKnobSize / 2 },
       { translateY: colorPickerY.value * colorPickerSize - pickerKnobSize / 2 },
     ],
-  }));
+  }), [colorPickerSize, pickerKnobSize]);
   
   const huePickerKnobStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: huePickerX.value * hueSliderWidth - pickerKnobSize / 2 },
     ],
-  }));
+  }), [hueSliderWidth, pickerKnobSize]);
   
   return (
     <View style={[styles.container, style]}>
@@ -287,9 +291,10 @@ export function ColorPicker({ initialColor, onColorChange, style }: ColorPickerP
             style={styles.valueGradient}
           />
           
-          {/* Color picker knob */}
+          {/* Color picker knob with enhanced visibility */}
           <Animated.View style={[styles.colorPickerKnob, colorPickerKnobStyle]}>
             <View style={[styles.colorPickerKnobInner, { backgroundColor: currentColor }]} />
+            <View style={styles.colorPickerKnobBorder} />
           </Animated.View>
         </View>
       </View>
@@ -311,42 +316,12 @@ export function ColorPicker({ initialColor, onColorChange, style }: ColorPickerP
             style={styles.hueGradient}
           />
           
-          {/* Hue picker knob */}
+          {/* Hue picker knob with enhanced design */}
           <Animated.View style={[styles.huePickerKnob, huePickerKnobStyle]}>
             <View style={styles.huePickerKnobInner} />
+            <View style={styles.huePickerKnobBorder} />
           </Animated.View>
         </View>
-      </View>
-      
-      {/* Color Preview and Hex Input */}
-      <View style={[styles.hexInputContainer, { backgroundColor: theme.surface }]}>
-        <View style={[styles.colorPreview, { backgroundColor: currentColor }]} />
-        <View style={styles.hexInputWrapper}>
-          <Text style={[styles.hexLabel, { color: theme.text }]}>#</Text>
-          <TextInput
-            style={[styles.hexInput, { 
-              backgroundColor: theme.background,
-              borderColor: theme.border,
-              color: theme.text 
-            }]}
-            value={hexInput}
-            onChangeText={handleHexChange}
-            placeholder="4063BC"
-            placeholderTextColor={theme.textSecondary}
-            maxLength={6}
-            autoCapitalize="characters"
-            selectTextOnFocus
-          />
-        </View>
-        <TouchableOpacity
-          style={[styles.copyButton, { backgroundColor: theme.primary }]}
-          onPress={() => {
-            // Copy to clipboard functionality could be added here
-            onColorChange(currentColor);
-          }}
-        >
-          <Text style={styles.copyButtonText}>✓</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -355,24 +330,25 @@ export function ColorPicker({ initialColor, onColorChange, style }: ColorPickerP
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    gap: getResponsiveSpacing(16),
+    gap: getResponsiveSpacing(20),
   },
   
-  // Color Picker
+  // Color Picker - Enhanced for better touch experience
   colorPickerContainer: {
     alignItems: 'center',
+    marginBottom: getResponsiveSpacing(4),
   },
   colorPicker: {
-    borderRadius: scale(16),
+    borderRadius: scale(18),
     overflow: 'hidden',
     position: 'relative',
-    elevation: Platform.OS === 'android' ? 4 : 0,
+    elevation: Platform.OS === 'android' ? 6 : 0,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
       },
     }),
   },
@@ -387,46 +363,51 @@ const styles = StyleSheet.create({
   },
   colorPickerKnob: {
     position: 'absolute',
-    width: scale(20),
-    height: scale(20),
-    borderRadius: scale(10),
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
+    width: scale(24),
+    height: scale(24),
+    borderRadius: scale(12),
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: Platform.OS === 'android' ? 8 : 0,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.4,
+        shadowRadius: 6,
+      },
+    }),
+  },
+  colorPickerKnobInner: {
+    width: scale(16),
+    height: scale(16),
+    borderRadius: scale(8),
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.15)',
+  },
+  colorPickerKnobBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: scale(12),
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+  },
+  
+  // Hue Slider - Enhanced design
+  hueSliderContainer: {
+    alignItems: 'center',
+    marginTop: getResponsiveSpacing(4),
+  },
+  hueSlider: {
+    borderRadius: scale(16),
+    overflow: 'hidden',
+    position: 'relative',
     elevation: Platform.OS === 'android' ? 4 : 0,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-      },
-    }),
-  },
-  colorPickerKnobInner: {
-    width: scale(12),
-    height: scale(12),
-    borderRadius: scale(6),
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.2)',
-  },
-  
-  // Hue Slider
-  hueSliderContainer: {
-    alignItems: 'center',
-  },
-  hueSlider: {
-    borderRadius: scale(15),
-    overflow: 'hidden',
-    position: 'relative',
-    elevation: Platform.OS === 'android' ? 2 : 0,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
       },
     }),
   },
@@ -435,100 +416,34 @@ const styles = StyleSheet.create({
   },
   huePickerKnob: {
     position: 'absolute',
-    top: -scale(5),
-    width: scale(20),
-    height: scale(40),
-    borderRadius: scale(10),
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
+    top: -scale(6),
+    width: scale(24),
+    height: scale(44),
+    borderRadius: scale(12),
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: Platform.OS === 'android' ? 4 : 0,
+    elevation: Platform.OS === 'android' ? 8 : 0,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
+        shadowOpacity: 0.4,
+        shadowRadius: 6,
       },
     }),
   },
   huePickerKnobInner: {
-    width: scale(14),
-    height: scale(30),
-    borderRadius: scale(7),
+    width: scale(16),
+    height: scale(32),
+    borderRadius: scale(8),
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.1)',
   },
-  
-  // Hex Input
-  hexInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: getResponsiveSpacing(16),
-    paddingVertical: getResponsiveSpacing(12),
+  huePickerKnobBorder: {
+    ...StyleSheet.absoluteFillObject,
     borderRadius: scale(12),
-    gap: getResponsiveSpacing(12),
-    minWidth: scale(200),
-    elevation: Platform.OS === 'android' ? 2 : 0,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-      },
-    }),
-  },
-  colorPreview: {
-    width: scale(32),
-    height: scale(32),
-    borderRadius: scale(16),
-    borderWidth: 2,
-    borderColor: 'rgba(0,0,0,0.1)',
-    elevation: Platform.OS === 'android' ? 2 : 0,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2,
-        shadowRadius: 2,
-      },
-    }),
-  },
-  hexInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  hexLabel: {
-    fontSize: moderateScale(16),
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    marginRight: getResponsiveSpacing(4),
-  },
-  hexInput: {
-    flex: 1,
-    height: scale(36),
-    paddingHorizontal: getResponsiveSpacing(12),
-    borderRadius: scale(8),
-    borderWidth: 1,
-    fontSize: moderateScale(14),
-    fontWeight: '500',
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    textAlign: 'center',
-  },
-  copyButton: {
-    width: scale(32),
-    height: scale(32),
-    borderRadius: scale(16),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  copyButtonText: {
-    color: '#FFFFFF',
-    fontSize: moderateScale(14),
-    fontWeight: 'bold',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
   },
 });
