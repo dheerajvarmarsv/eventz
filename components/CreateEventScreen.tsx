@@ -9,12 +9,14 @@ import {
   Platform,
   TextInput,
   Image,
+  ImageBackground,
   Alert,
   Modal,
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import Animated, {
   FadeIn,
   SlideInDown,
@@ -22,7 +24,9 @@ import Animated, {
   useAnimatedStyle,
   withDelay,
   withTiming,
+  withSpring,
   Easing,
+  interpolate,
 } from 'react-native-reanimated';
 import { 
   X, 
@@ -30,12 +34,20 @@ import {
   MapPin, 
   ImageIcon,
   Check,
+  User,
+  FileText,
+  Eye,
+  ArrowLeft,
 } from 'lucide-react-native';
 import { DateTimePickerModal } from './DateTimePickerModal';
 import { LocationPickerModal } from './LocationPickerModal';
 import { EventDetailsModal } from './EventDetailsModal';
 import { BackgroundPickerModal } from './BackgroundPickerModal';
 import { ColorPicker } from './ColorPicker';
+import { useTheme } from '@/contexts/ThemeContext';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 // Local TextStyle interface without keyboard type
 interface TextStyle {
   color: string;
@@ -46,9 +58,6 @@ interface TextStyle {
   fontStyle: 'normal' | 'italic';
   textDecorationLine: 'none' | 'underline' | 'line-through' | 'underline line-through';
 }
-import { useTheme } from '@/contexts/ThemeContext';
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Fixed responsive scaling to match home screen sizing
 const scale = (size: number) => {
@@ -116,10 +125,10 @@ interface EventData {
 }
 
 // Helper function to get display font size (capped for better UI)
-const getDisplayFontSize = (fontSize: number) => {
-  // Cap the display font size to prevent UI issues
-  return Math.min(fontSize, 28);
-};
+  const getDisplayFontSize = (fontSize: number) => {
+    // Cap the display font size to 32px maximum
+    return Math.min(fontSize, 32);
+  };
 
 // Helper function to get proper font family for weight and style
 const getFontFamily = (baseFamily: string, fontWeight: string, fontStyle: string) => {
@@ -228,22 +237,19 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
 
   // Animation values
   const headerOpacity = useSharedValue(0);
-  const cardOpacity = useSharedValue(0);
-  const cardTranslateY = useSharedValue(20);
+  const contentOpacity = useSharedValue(0);
+  const contentTranslateY = useSharedValue(30);
 
   // Initialize animations
   useEffect(() => {
     if (visible) {
-      headerOpacity.value = withDelay(100, withTiming(1, { duration: 400 }));
-      cardOpacity.value = withDelay(200, withTiming(1, { duration: 400 }));
-      cardTranslateY.value = withDelay(200, withTiming(0, { 
-        duration: 400, 
-        easing: Easing.out(Easing.quad) 
-      }));
+      headerOpacity.value = withDelay(100, withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) }));
+      contentOpacity.value = withDelay(200, withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) }));
+      contentTranslateY.value = withDelay(200, withSpring(0, { damping: 20, stiffness: 100 }));
     } else {
       headerOpacity.value = 0;
-      cardOpacity.value = 0;
-      cardTranslateY.value = 20;
+      contentOpacity.value = 0;
+      contentTranslateY.value = 30;
     }
   }, [visible]);
 
@@ -277,31 +283,18 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
     opacity: headerOpacity.value,
   }));
 
-  const cardAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: cardOpacity.value,
-    transform: [{ translateY: cardTranslateY.value }],
+  const contentAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: contentOpacity.value,
+    transform: [{ translateY: contentTranslateY.value }],
   }));
 
   // Event handlers
-  const handleDateTimePress = () => {
-    setShowDatePicker(true);
-  };
-
-  const handleLocationPress = () => {
-    setShowLocationPicker(true);
-  };
-
-  const handleEventDetailsPress = () => {
-    setShowEventDetails(true);
-  };
-
-  const handleBackgroundPress = () => {
-    setShowBackgroundPicker(true);
-  };
-
-  const handleTitlePress = () => {
-    setShowTitleInput(true);
-  };
+  const handleDateTimePress = () => setShowDatePicker(true);
+  const handleLocationPress = () => setShowLocationPicker(true);
+  const handleEventDetailsPress = () => setShowEventDetails(true);
+  const handleBackgroundPress = () => setShowBackgroundPicker(true);
+  const handleTitlePress = () => setShowTitleInput(true);
+  const handlePreviewPress = () => setShowInvitationPreview(true);
 
   const handleTitleSave = (title: string) => {
     setEventData(prev => ({ ...prev, title }));
@@ -364,62 +357,119 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
     return dateStr;
   };
 
-  const isFormValid = () => {
-    return eventData.title.trim() && eventData.date && eventData.time && eventData.location;
-  };
 
-  const handleCreateEvent = () => {
-    if (!isFormValid()) {
-      Alert.alert('Missing Information', 'Please fill in all required fields: Event Title, Date, Time, and Location.');
-      return;
-    }
 
-    const finalEventData = {
-      title: eventData.title,
-      date: eventData.date!.toLocaleDateString('en-US', {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      }),
-      time: eventData.time!.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      }),
-      location: eventData.locationName || eventData.location,
-      description: eventData.description,
-      hostName: eventData.hostName,
-      backgroundImage: eventData.backgroundImage,
-    };
+  // Helper function to render preview content
+  const renderPreviewContent = () => (
+    <>
+      <LinearGradient
+        colors={['rgba(0,0,0,0.2)', 'rgba(0,0,0,0.8)']}
+        style={styles.previewGradientOverlay}
+      />
+      <SafeAreaView style={styles.previewContainer}>
+        {/* Header */}
+        <View style={styles.previewHeader}>
+          <TouchableOpacity 
+            style={styles.previewBackButton}
+            onPress={() => setShowInvitationPreview(false)}
+          >
+            <ArrowLeft size={getResponsiveSize(18, 20, 22, 24, 26)} color="white" strokeWidth={2} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.previewNextButton}>
+            <Text style={styles.previewNextButtonText}>Next</Text>
+          </TouchableOpacity>
+        </View>
 
-    onEventCreated(finalEventData);
-    
-    Alert.alert(
-      'Event Created! 🎉',
-      `${eventData.title} has been created successfully. You can now share it with your guests.`,
-      [{ text: 'Awesome!' }]
-    );
-  };
+        {/* Content */}
+        <View style={styles.previewContent}>
+          {/* Event Title */}
+          <Text style={[
+            styles.previewTitle,
+            {
+              color: eventData.title ? eventData.titleStyle.color : '#FFFFFF',
+              fontSize: moderateScale(Math.min(eventData.titleStyle.fontSize * 1.2, 48)),
+              fontFamily: getFontFamily(
+                eventData.titleStyle.fontFamily, 
+                eventData.titleStyle.fontWeight, 
+                eventData.titleStyle.fontStyle
+              ),
+              fontWeight: eventData.titleStyle.fontWeight,
+              textAlign: eventData.titleStyle.textAlign,
+              fontStyle: eventData.titleStyle.fontStyle,
+              textDecorationLine: eventData.titleStyle.textDecorationLine,
+            }
+          ]} numberOfLines={3}>
+            {eventData.title || 'Event Title'}
+          </Text>
 
-  const handlePreviewPress = () => {
-    setShowInvitationPreview(true);
-  };
+          {/* Date & Time */}
+          <Text style={styles.previewSubtitle}>
+            {formatDateTime()}
+          </Text>
 
-  // Dynamic styles based on theme
-  const dynamicStyles = {
-    container: {
-      backgroundColor: theme.background,
-    },
-    surface: {
-      backgroundColor: `${theme.surface}CC`, // 80% opacity
-      borderColor: `${theme.border}66`, // 40% opacity
-    },
-    glassSurface: {
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
-      borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
-    },
-  };
+          {/* Location Name */}
+          {eventData.locationName && (
+            <Text style={styles.previewSubtitle}>
+              {eventData.locationName}
+            </Text>
+          )}
+
+          {/* Location Address */}
+          {eventData.location && (
+            <Text style={styles.previewLocation}>
+              {eventData.location}
+            </Text>
+          )}
+
+          {/* Host Info */}
+          <View style={styles.previewHostInfo}>
+            <View style={styles.previewHostAvatar}>
+              <Text style={styles.previewHostAvatarText}>
+                {eventData.hostName.split(' ').map(n => n[0]).join('')}
+              </Text>
+            </View>
+            <Text style={styles.previewHostName}>
+              Hosted by {eventData.hostName}
+            </Text>
+          </View>
+
+          {/* Description */}
+          {eventData.description && (
+            <Text style={styles.previewDescription}>
+              {eventData.description}
+            </Text>
+          )}
+
+          {/* RSVP Container */}
+          <View style={styles.previewRsvpContainer}>
+            <View style={styles.previewRsvpOptions}>
+              <TouchableOpacity style={styles.previewRsvpOption}>
+                <Check size={getResponsiveSize(20, 22, 24, 26, 28)} color="white" strokeWidth={2} />
+                <Text style={styles.previewRsvpOptionText}>Going</Text>
+              </TouchableOpacity>
+
+              <View style={styles.previewRsvpDivider} />
+
+              <TouchableOpacity style={styles.previewRsvpOption}>
+                <X size={getResponsiveSize(20, 22, 24, 26, 28)} color="white" strokeWidth={2} />
+                <Text style={styles.previewRsvpOptionText}>Not Going</Text>
+              </TouchableOpacity>
+
+              <View style={styles.previewRsvpDivider} />
+
+              <TouchableOpacity style={styles.previewRsvpOption}>
+                <Text style={[styles.previewRsvpOptionIcon, { fontSize: getResponsiveSize(16, 18, 20, 22, 24) }]}>?</Text>
+                <Text style={styles.previewRsvpOptionText}>Maybe</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </SafeAreaView>
+    </>
+  );
+
+  // Check if background exists for styling
+  const hasBackground = !!eventData.backgroundImage;
 
   return (
     <Modal
@@ -427,162 +477,156 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
       animationType="slide"
       presentationStyle="fullScreen"
     >
-      <View style={[styles.container, dynamicStyles.container]}>
+      <View style={styles.container}>
         <StatusBar 
-        barStyle={eventData.backgroundImage ? "light-content" : (isDark ? "light-content" : "dark-content")} 
-        backgroundColor="transparent" 
-        translucent 
-      />
+          barStyle="light-content" 
+          backgroundColor="transparent" 
+          translucent 
+        />
         
-        {/* Background Pattern/Texture */}
+        {/* Background */}
         <View style={styles.backgroundContainer}>
           {(() => {
             const backgroundSource = getBackgroundImageSource(eventData.backgroundImage);
             
             if (backgroundSource) {
               if (typeof backgroundSource === 'string' && backgroundSource.startsWith('#')) {
-                // Color background (legacy support)
                 return (
-                  <>
-                    <LinearGradient
-                      colors={[
-                        backgroundSource, 
-                        backgroundSource + 'E6', // 90% opacity
-                        backgroundSource + 'CC'  // 80% opacity
-                      ]}
-                      style={styles.gradientBackground}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    />
-                    <View style={[
-                      styles.backgroundOverlay, 
-                      { backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.2)' }
-                    ]} />
-                  </>
+          <LinearGradient
+                    colors={[backgroundSource, backgroundSource + 'E6', backgroundSource + 'CC']}
+                    style={styles.gradientBackground}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  />
                 );
               } else {
-                // Image background (from invites folder or URL)
                 return (
-                  <>
-                    <Image
-                      source={backgroundSource}
-                      style={styles.backgroundImage}
-                      resizeMode="cover"
-                    />
-                    <View style={[
-                      styles.backgroundOverlay, 
-                      { backgroundColor: isDark ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.15)' }
-                    ]} />
-                  </>
+                  <Image
+                    source={backgroundSource}
+                    style={styles.backgroundImage}
+                    resizeMode="cover"
+                  />
                 );
               }
             } else {
-              // Default gradient when no background is selected
+              // Default dark background when no image
               return (
                 <LinearGradient
-                  colors={isDark 
-                    ? [theme.background, theme.surface, theme.background]
-                    : [theme.background, theme.surface, theme.background]
-                  }
-                  style={styles.gradientBackground}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                />
+                  colors={['#1a1a1a', '#2a2a2a', '#1a1a1a']}
+            style={styles.gradientBackground}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          />
               );
             }
           })()}
         </View>
 
         <SafeAreaView style={styles.safeArea}>
-          {/* Header */}
+          {/* Header with Translucent Buttons */}
           <Animated.View style={[styles.header, headerAnimatedStyle]}>
-            <TouchableOpacity onPress={onClose} style={[styles.headerButton, dynamicStyles.glassSurface]}>
+            <TouchableOpacity 
+              onPress={onClose} 
+              style={styles.headerButton}
+            >
+              <BlurView intensity={80} tint="dark" style={styles.headerButtonBlur} />
               <X 
                 size={getResponsiveSize(20, 22, 24, 26, 28)} 
-                color={theme.text} 
-                strokeWidth={2} 
+                color="#FFFFFF" 
+                strokeWidth={2.5} 
               />
             </TouchableOpacity>
             
-            <View style={styles.headerCenter}>
-              <Text style={[styles.headerTitle, { color: theme.text }]}>
-                Create Event
-              </Text>
-            </View>
-            
             <TouchableOpacity 
-              style={[styles.demoButton, { backgroundColor: theme.primary }]}
+              style={styles.previewButton}
               onPress={handlePreviewPress}
             >
-              <Text style={styles.demoButtonText}>Preview</Text>
+              <BlurView intensity={60} tint="dark" style={styles.previewButtonBlur} />
+              <Eye size={getResponsiveSize(16, 17, 18, 19, 20)} color="#FFFFFF" strokeWidth={2.5} />
+              <Text style={styles.previewButtonText}>Preview</Text>
             </TouchableOpacity>
           </Animated.View>
 
-          {/* Background Add Button */}
+          {/* Background Button */}
           <Animated.View style={[styles.backgroundButtonContainer, headerAnimatedStyle]}>
             <TouchableOpacity 
               style={styles.backgroundButton}
               onPress={handleBackgroundPress}
+              activeOpacity={0.8}
             >
-              <View style={[styles.backgroundButtonGlass, dynamicStyles.glassSurface]}>
-                <ImageIcon 
-                  size={getResponsiveSize(16, 18, 20, 22, 24)} 
-                  color={theme.text} 
-                  strokeWidth={2}
-                />
-              </View>
-              <Text style={[styles.backgroundButtonText, { color: theme.text }]}>
+              <BlurView intensity={60} tint="dark" style={styles.backgroundButtonBlur} />
+              <Text style={styles.backgroundButtonText}>
                 {eventData.backgroundImage ? 'Edit Background' : 'Add Background'}
               </Text>
             </TouchableOpacity>
           </Animated.View>
 
-          {/* Event Form */}
-          <Animated.View style={[styles.formContainer, cardAnimatedStyle]}>
-            {/* Event Title */}
-            <TouchableOpacity
-              style={styles.titleContainer}
-              onPress={handleTitlePress}
-              activeOpacity={0.8}
+          {/* Main Content with Connected Translucent Cards */}
+          <Animated.View style={[styles.mainContent, contentAnimatedStyle]}>
+            <ScrollView 
+              style={styles.scrollContainer}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              bounces={true}
             >
-              <View style={[styles.titleGlassBackground, dynamicStyles.glassSurface]} />
-              <View style={styles.titleContent}>
-                <Text style={[
-                  styles.titleText,
-                  {
-                    color: eventData.title ? eventData.titleStyle.color : theme.textSecondary,
-                    fontSize: moderateScale(getDisplayFontSize(eventData.titleStyle.fontSize)),
-                    fontFamily: getFontFamily(
-                      eventData.titleStyle.fontFamily, 
-                      eventData.titleStyle.fontWeight, 
-                      eventData.titleStyle.fontStyle
-                    ),
-                    fontWeight: eventData.titleStyle.fontWeight,
-                    textAlign: eventData.titleStyle.textAlign,
-                    fontStyle: eventData.titleStyle.fontStyle,
-                    textDecorationLine: eventData.titleStyle.textDecorationLine,
-                  }
-                ]} numberOfLines={2}>
-                  {eventData.title || 'Event Title *'}
-                </Text>
-              </View>
-            </TouchableOpacity>
+              {/* Connected Event Details Card */}
+              <View style={styles.connectedCard}>
+                {/* Title Section */}
+                                  <TouchableOpacity
+                    style={styles.titleSection}
+                    onPress={handleTitlePress}
+                    activeOpacity={0.8}
+                  >
+                    <BlurView intensity={60} tint="dark" style={styles.cardBlur} />
+                    <LinearGradient
+                      colors={['rgba(0,0,0,0.2)', 'rgba(0,0,0,0.1)']}
+                      style={styles.cardGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    />
+                  <Text style={[
+                    styles.titleText,
+                    {
+                      color: eventData.title ? eventData.titleStyle.color : 'rgba(255,255,255,0.7)',
+                      fontSize: moderateScale(getDisplayFontSize(eventData.titleStyle.fontSize)),
+                      fontFamily: getFontFamily(
+                        eventData.titleStyle.fontFamily, 
+                        eventData.titleStyle.fontWeight, 
+                        eventData.titleStyle.fontStyle
+                      ),
+                      fontWeight: eventData.titleStyle.fontWeight,
+                      textAlign: eventData.titleStyle.textAlign,
+                      fontStyle: eventData.titleStyle.fontStyle,
+                      textDecorationLine: eventData.titleStyle.textDecorationLine,
+                      lineHeight: moderateScale(getDisplayFontSize(eventData.titleStyle.fontSize) * 1.2),
+                    }
+                  ]} numberOfLines={eventData.titleStyle.fontSize > 26 ? 2 : 3}>
+                    {eventData.title || 'Event Title *'}
+                  </Text>
+                </TouchableOpacity>
 
-            {/* Date and Time Section */}
+                                  {/* Date & Time Section */}
             <TouchableOpacity 
-              style={styles.sectionCard}
+                    style={styles.detailSection}
               onPress={handleDateTimePress}
-            >
-              <View style={[styles.sectionGlassBackground, dynamicStyles.glassSurface]} />
-              <View style={styles.sectionContent}>
-                <View style={[styles.sectionIcon, { backgroundColor: `${theme.primary}20` }]}>
+                    activeOpacity={0.8}
+                  >
+                    <BlurView intensity={50} tint="dark" style={styles.cardBlur} />
+                    <LinearGradient
+                      colors={['rgba(0,0,0,0.15)', 'rgba(0,0,0,0.08)']}
+                      style={styles.cardGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    />
+                  <View style={styles.detailContent}>
+                    <View style={styles.detailIconContainer}>
                   <Calendar 
-                    size={getResponsiveSize(18, 20, 22, 24, 26)} 
-                    color={theme.primary} 
+                        size={getResponsiveSize(20, 22, 24, 26, 28)} 
+                        color="rgba(255,255,255,0.8)" 
                     strokeWidth={2}
                   />
                 </View>
-                <Text style={[styles.sectionText, { color: theme.text }]}>
+                    <Text style={styles.detailText}>
                   {formatDateTime()}
                 </Text>
               </View>
@@ -590,81 +634,68 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
 
             {/* Location Section */}
             <TouchableOpacity 
-              style={styles.sectionCard}
+                    style={styles.locationSection}
               onPress={handleLocationPress}
-            >
-              <View style={[styles.sectionGlassBackground, dynamicStyles.glassSurface]} />
-              <View style={styles.sectionContent}>
-                <View style={[styles.sectionIcon, { backgroundColor: `${theme.primary}20` }]}>
+                    activeOpacity={0.8}
+                  >
+                    <BlurView intensity={50} tint="dark" style={styles.cardBlur} />
+                    <LinearGradient
+                      colors={['rgba(0,0,0,0.15)', 'rgba(0,0,0,0.08)']}
+                      style={styles.cardGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    />
+                  <View style={styles.detailContent}>
+                    <View style={styles.detailIconContainer}>
                   <MapPin 
-                    size={getResponsiveSize(18, 20, 22, 24, 26)} 
-                    color={theme.primary} 
+                        size={getResponsiveSize(20, 22, 24, 26, 28)} 
+                        color="rgba(255,255,255,0.8)" 
                     strokeWidth={2}
                   />
                 </View>
-                <Text style={[styles.sectionText, { color: theme.text }]}>
+                    <Text style={styles.detailText}>
                   {eventData.locationName || eventData.location || 'Location'}
                 </Text>
               </View>
             </TouchableOpacity>
-          </Animated.View>
+              </View>
 
-          {/* Host Section */}
-          <Animated.View style={[styles.hostContainer, cardAnimatedStyle]}>
+              {/* Host Card */}
             <TouchableOpacity 
               style={styles.hostCard}
               onPress={handleEventDetailsPress}
-            >
-              <View style={[styles.hostGlassBackground, dynamicStyles.glassSurface]} />
+                activeOpacity={0.8}
+              >
+                <BlurView intensity={50} tint="dark" style={styles.cardBlur} />
+                <LinearGradient
+                  colors={['rgba(0,0,0,0.15)', 'rgba(0,0,0,0.08)']}
+                  style={styles.cardGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                />
               <View style={styles.hostContent}>
                 <View style={styles.hostAvatar}>
-                  <View style={[styles.avatarPlaceholder, { backgroundColor: `${theme.primary}30` }]}>
-                    <Text style={[styles.avatarText, { color: theme.primary }]}>
+                    <Text style={styles.hostAvatarText}>
                       {eventData.hostName.split(' ').map(n => n[0]).join('')}
                     </Text>
-                  </View>
                 </View>
                 <View style={styles.hostInfo}>
-                  <Text style={[styles.hostName, { color: theme.text }]}>
+                    <Text style={styles.hostName}>
                     Hosted by {eventData.hostName}
                   </Text>
-                  <Text style={[styles.hostDescription, { color: theme.textSecondary }]}>
+                    <Text style={styles.hostDescription}>
                     {eventData.description || 'Add a description.'}
                   </Text>
                 </View>
               </View>
             </TouchableOpacity>
-          </Animated.View>
 
-          {/* Create Button */}
-          <Animated.View style={[styles.createButtonContainer, cardAnimatedStyle]}>
-            <TouchableOpacity 
-              style={[
-                styles.createButton,
-                { opacity: isFormValid() ? 1 : 0.6 }
-              ]}
-              onPress={handleCreateEvent}
-              disabled={!isFormValid()}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={isFormValid() ? [theme.success, '#45A049'] : [theme.border, theme.textSecondary]}
-                style={styles.createButtonGradient}
-              >
-                <Check 
-                  size={getResponsiveSize(16, 18, 20, 22, 24)} 
-                  color="#FFFFFF" 
-                  strokeWidth={2}
-                />
-                <Text style={styles.createButtonText}>
-                  {isFormValid() ? 'Create Event' : 'Complete Required Fields'}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
+          
+            </ScrollView>
           </Animated.View>
         </SafeAreaView>
 
-        {/* Title Input Modal */}
+        {/* Complete Title Input Modal */}
         <Modal
           visible={showTitleInput}
           animationType="slide"
@@ -1012,7 +1043,7 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
           </View>
         </Modal>
 
-        {/* Modals */}
+        {/* All Original Modals */}
         <DateTimePickerModal
           visible={showDatePicker}
           onClose={() => setShowDatePicker(false)}
@@ -1044,260 +1075,90 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
           currentBackground={eventData.backgroundImage}
         />
 
+        {/* Event Preview Modal - Simple Design */}
         <Modal
           visible={showInvitationPreview}
           animationType="slide"
           presentationStyle="fullScreen"
         >
-          <View style={[styles.invitationPreviewContainer, dynamicStyles.container]}>
-            <StatusBar 
-              barStyle={eventData.backgroundImage ? "light-content" : (isDark ? "light-content" : "dark-content")} 
-              backgroundColor="transparent" 
-              translucent 
-            />
+          {(() => {
+            const backgroundSource = getBackgroundImageSource(eventData.backgroundImage);
             
-            {/* Background */}
-            <View style={styles.backgroundContainer}>
-              {(() => {
-                const backgroundSource = getBackgroundImageSource(eventData.backgroundImage);
-                
-                if (backgroundSource) {
-                  if (typeof backgroundSource === 'string' && backgroundSource.startsWith('#')) {
-                    // Color background (legacy support)
-                    return (
-                      <>
-                        <LinearGradient
-                          colors={[
-                            backgroundSource, 
-                            backgroundSource + 'F0',
-                            backgroundSource + 'E6'
-                          ]}
-                          style={styles.gradientBackground}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                        />
-                        <View style={[
-                          styles.backgroundOverlay, 
-                          { backgroundColor: isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.25)' }
-                        ]} />
-                      </>
-                    );
-                  } else {
-                    // Image background (from invites folder or URL)
-                    return (
-                      <>
-                        <Image
-                          source={backgroundSource}
-                          style={styles.backgroundImage}
-                          resizeMode="cover"
-                        />
-                        <View style={[
-                          styles.backgroundOverlay, 
-                          { backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.2)' }
-                        ]} />
-                      </>
-                    );
+            if (backgroundSource) {
+              if (typeof backgroundSource === 'string' && backgroundSource.startsWith('#')) {
+                // Solid color background
+                return (
+                  <LinearGradient
+                    colors={[backgroundSource, backgroundSource + 'F0', backgroundSource + 'E6']}
+                    style={styles.previewBackground}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    {renderPreviewContent()}
+                  </LinearGradient>
+                );
+              } else {
+                // Image background
+                return (
+                  <ImageBackground
+                    source={backgroundSource}
+                    style={styles.previewBackground}
+                    resizeMode="cover"
+                  >
+                    {renderPreviewContent()}
+                  </ImageBackground>
+                );
+              }
+            } else {
+              // Default gradient background
+              return (
+                <LinearGradient
+                  colors={isDark 
+                    ? ['#1a1a2e', '#16213e', '#0f3460']
+                    : ['#667eea', '#764ba2', '#f093fb']
                   }
-                } else {
-                  // Default elegant gradient for preview
-                  return (
-                    <LinearGradient
-                      colors={isDark 
-                        ? ['#1a1a2e', '#16213e', '#0f3460']
-                        : ['#667eea', '#764ba2', '#f093fb']
-                      }
-                      style={styles.gradientBackground}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    />
-                  );
-                }
-              })()}
-            </View>
-
-            <SafeAreaView style={styles.invitationSafeArea}>
-              {/* Header */}
-              <View style={styles.invitationHeader}>
-                <TouchableOpacity 
-                  onPress={() => setShowInvitationPreview(false)} 
-                  style={[styles.invitationCloseButton, dynamicStyles.glassSurface]}
+                  style={styles.previewBackground}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
                 >
-                  <X size={getResponsiveSize(18, 20, 22, 24, 26)} color={theme.text} strokeWidth={2} />
-                </TouchableOpacity>
-              </View>
-
-              {/* Main Invitation Card */}
-              <ScrollView 
-                style={styles.invitationScroll} 
-                contentContainerStyle={styles.invitationScrollContent}
-                showsVerticalScrollIndicator={false}
-                bounces={true}
-              >
-                <View style={styles.invitationCard}>
-                  {/* Invitation Header */}
-                  <View style={[styles.invitationCardHeader, dynamicStyles.glassSurface]}>
-                    <Text style={styles.invitationLabel}>You're Invited!</Text>
-                    
-                    {/* Event Title */}
-                    <Text style={[
-                      styles.invitationEventTitle,
-                      {
-                        color: eventData.title ? eventData.titleStyle.color : theme.text,
-                        fontSize: moderateScale(Math.min(eventData.titleStyle.fontSize * 1.3, 36)),
-                        fontFamily: getFontFamily(
-                          eventData.titleStyle.fontFamily, 
-                          eventData.titleStyle.fontWeight, 
-                          eventData.titleStyle.fontStyle
-                        ),
-                        fontWeight: eventData.titleStyle.fontWeight,
-                        textAlign: eventData.titleStyle.textAlign,
-                        fontStyle: eventData.titleStyle.fontStyle,
-                        textDecorationLine: eventData.titleStyle.textDecorationLine,
-                      }
-                    ]} numberOfLines={3}>
-                      {eventData.title || 'Event Title'}
-                    </Text>
-                  </View>
-
-                  {/* Event Details */}
-                  <View style={[styles.invitationDetailsSection, dynamicStyles.glassSurface]}>
-                    <View style={styles.detailRow}>
-                      <View style={styles.detailIconContainer}>
-                        <Calendar size={getResponsiveSize(20, 22, 24, 26, 28)} color={theme.primary} strokeWidth={2} />
-                      </View>
-                      <View style={styles.detailContent}>
-                        <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Date & Time</Text>
-                        <Text style={[styles.detailValue, { color: theme.text }]}>
-                          {formatDateTime()}
-                        </Text>
-                      </View>
-                    </View>
-                    
-                    <View style={styles.detailRow}>
-                      <View style={styles.detailIconContainer}>
-                        <MapPin size={getResponsiveSize(20, 22, 24, 26, 28)} color={theme.primary} strokeWidth={2} />
-                      </View>
-                      <View style={styles.detailContent}>
-                        <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Location</Text>
-                        <Text style={[styles.detailValue, { color: theme.text }]} numberOfLines={2}>
-                          {eventData.locationName || eventData.location || 'Location TBD'}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* Host Information */}
-                  <View style={[styles.invitationHostSection, dynamicStyles.glassSurface]}>
-                    <View style={styles.hostRow}>
-                      <View style={styles.hostAvatarLarge}>
-                        <LinearGradient
-                          colors={[theme.primary, theme.primary + 'CC']}
-                          style={styles.hostAvatarGradient}
-                        >
-                          <Text style={styles.hostAvatarLargeText}>
-                            {eventData.hostName.split(' ').map(n => n[0]).join('')}
-                          </Text>
-                        </LinearGradient>
-                      </View>
-                      <View style={styles.hostDetails}>
-                        <Text style={[styles.hostTitle, { color: theme.textSecondary }]}>Hosted by</Text>
-                        <Text style={[styles.hostNameLarge, { color: theme.text }]}>
-                          {eventData.hostName}
-                        </Text>
-                        {eventData.description && (
-                          <Text style={[styles.hostDescriptionLarge, { color: theme.textSecondary }]} numberOfLines={3}>
-                            {eventData.description}
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* RSVP Section */}
-                  <View style={[styles.rsvpSectionMain, dynamicStyles.glassSurface]}>
-                    <Text style={[styles.rsvpQuestion, { color: theme.text }]}>
-                      Will you be attending?
-                    </Text>
-                    
-                    <View style={styles.rsvpButtonsContainer}>
-                      {/* Going Button */}
-                      <TouchableOpacity 
-                        style={[styles.rsvpButtonMain, styles.rsvpButtonGoing]}
-                        activeOpacity={0.8}
-                        disabled
-                      >
-                        <LinearGradient
-                          colors={['#4CAF50', '#45A049']}
-                          style={styles.rsvpButtonGradient}
-                        >
-                          <Check size={getResponsiveSize(18, 20, 22, 24, 26)} color="#FFFFFF" strokeWidth={2.5} />
-                          <Text style={styles.rsvpButtonLabel}>Going</Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                      
-                      {/* Not Going Button */}
-                      <TouchableOpacity 
-                        style={[styles.rsvpButtonMain, styles.rsvpButtonNotGoing]}
-                        activeOpacity={0.8}
-                        disabled
-                      >
-                        <LinearGradient
-                          colors={['#f44336', '#d32f2f']}
-                          style={styles.rsvpButtonGradient}
-                        >
-                          <X size={getResponsiveSize(18, 20, 22, 24, 26)} color="#FFFFFF" strokeWidth={2.5} />
-                          <Text style={styles.rsvpButtonLabel}>Not Going</Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                      
-                      {/* Maybe Button */}
-                      <TouchableOpacity 
-                        style={[styles.rsvpButtonMain, styles.rsvpButtonMaybe]}
-                        activeOpacity={0.8}
-                        disabled
-                      >
-                        <LinearGradient
-                          colors={['#FF9800', '#F57C00']}
-                          style={styles.rsvpButtonGradient}
-                        >
-                          <Text style={[styles.rsvpButtonIcon, { fontSize: getResponsiveSize(16, 18, 20, 22, 24) }]}>?</Text>
-                          <Text style={styles.rsvpButtonLabel}>Maybe</Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    </View>
-                    
-                    <Text style={[styles.rsvpNote, { color: theme.textSecondary }]}>
-                      Your response helps the host plan better
-                    </Text>
-                  </View>
-
-                  {/* Invitation Footer */}
-                  <View style={[styles.invitationFooterMain, dynamicStyles.glassSurface]}>
-                    <View style={styles.footerRow}>
-                      <View style={styles.footerAvatarSmall}>
-                        <Text style={[styles.footerAvatarText, { color: theme.primary }]}>
-                          {eventData.hostName.split(' ').map(n => n[0]).join('')}
-                        </Text>
-                      </View>
-                      <Text style={[styles.footerHostText, { color: theme.textSecondary }]}>
-                        Event created by {eventData.hostName.split(' ')[0]}
-                      </Text>
-                    </View>
-                    
-                    <View style={styles.footerDivider} />
-                    
-                    <View style={styles.footerBrand}>
-                      <Text style={[styles.brandText, { color: theme.primary }]}>eventz</Text>
-                      <Text style={[styles.brandTagline, { color: theme.textSecondary }]}>
-                        Making events memorable
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              </ScrollView>
-            </SafeAreaView>
-          </View>
+                  {renderPreviewContent()}
+                </LinearGradient>
+              );
+                        }
+          })()}
         </Modal>
+
+        {/* All other modals for functionality */}
+        <DateTimePickerModal
+          visible={showDatePicker}
+          onClose={() => setShowDatePicker(false)}
+          onSelect={handleDateSelect}
+          currentDate={eventData.date}
+          currentTime={eventData.time}
+        />
+
+        <LocationPickerModal
+          visible={showLocationPicker}
+          onClose={() => setShowLocationPicker(false)}
+          onSelect={handleLocationSelect}
+          currentLocation={eventData.location}
+          currentLocationName={eventData.locationName}
+        />
+
+        <EventDetailsModal
+          visible={showEventDetails}
+          onClose={() => setShowEventDetails(false)}
+          onSave={handleEventDetailsUpdate}
+          currentDescription={eventData.description}
+          currentHostName={eventData.hostName}
+        />
+
+        <BackgroundPickerModal
+          visible={showBackgroundPicker}
+          onClose={() => setShowBackgroundPicker(false)}
+          onSelect={handleBackgroundSelect}
+          currentBackground={eventData.backgroundImage}
+        />
       </View>
     </Modal>
   );
@@ -1307,6 +1168,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  safeArea: {
+    flex: 1,
+  },
+  
+  // Background Styles
   backgroundContainer: {
     position: 'absolute',
     top: 0,
@@ -1314,260 +1180,240 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  gradientBackground: {
-    flex: 1,
-  },
   backgroundImage: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
     width: '100%',
     height: '100%',
   },
-  backgroundOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  gradientBackground: {
+    width: '100%',
+    height: '100%',
   },
-  safeArea: {
-    flex: 1,
-  },
-  
-  // Header with proper responsive sizing
+
+  // Header Styles
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: getResponsiveSpacing(20),
-    paddingTop: getResponsiveSpacing(isShortDevice ? 8 : 12),
+    paddingTop: getResponsiveSpacing(Platform.OS === 'ios' ? 8 : 16),
     paddingBottom: getResponsiveSpacing(8),
   },
   headerButton: {
-    width: getResponsiveSize(38, 42, 46, 50, 54),
-    height: getResponsiveSize(38, 42, 46, 50, 54),
-    borderRadius: getResponsiveSize(19, 21, 23, 25, 27),
+    width: getResponsiveSize(44, 48, 52, 56, 60),
+    height: getResponsiveSize(44, 48, 52, 56, 60),
+    borderRadius: getResponsiveSize(22, 24, 26, 28, 30),
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
+    position: 'relative',
+    overflow: 'hidden',
   },
-  headerCenter: {
-    flex: 1,
+  headerButtonBlur: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: getResponsiveSize(22, 24, 26, 28, 30),
+  },
+  previewButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: getResponsiveSpacing(16),
+    paddingHorizontal: getResponsiveSpacing(20),
+    paddingVertical: getResponsiveSpacing(12),
+    borderRadius: getResponsiveSize(22, 24, 26, 28, 30),
+    gap: getResponsiveSpacing(8),
+    position: 'relative',
+    overflow: 'hidden',
   },
-  headerTitle: {
-    fontSize: getResponsiveSize(16, 18, 20, 22, 24),
-    fontFamily: 'Inter-Bold',
-    textAlign: 'center',
+  previewButtonBlur: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: getResponsiveSize(22, 24, 26, 28, 30),
   },
-  demoButton: {
-    paddingHorizontal: getResponsiveSize(12, 14, 16, 18, 20),
-    paddingVertical: getResponsiveSize(8, 10, 12, 14, 16),
-    borderRadius: getResponsiveSize(16, 18, 20, 22, 24),
-    minWidth: getResponsiveSize(70, 80, 90, 100, 110),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  demoButtonText: {
-    fontSize: getResponsiveSize(12, 13, 14, 15, 16),
+  previewButtonText: {
+    fontSize: getResponsiveSize(15, 16, 17, 18, 19),
     fontFamily: 'Inter-SemiBold',
+    fontWeight: '600',
     color: '#FFFFFF',
   },
 
   // Background Button
   backgroundButtonContainer: {
     alignItems: 'center',
-    marginTop: getResponsiveSpacing(isShortDevice ? 30 : isTallDevice ? 60 : 45),
-    marginBottom: getResponsiveSpacing(10),
+    paddingHorizontal: getResponsiveSpacing(20),
+    marginTop: getResponsiveSpacing(8),
+    marginBottom: getResponsiveSpacing(12),
   },
   backgroundButton: {
-    alignItems: 'center',
-    gap: getResponsiveSpacing(8),
+    paddingHorizontal: getResponsiveSpacing(24),
+    paddingVertical: getResponsiveSpacing(12),
+    borderRadius: getResponsiveSize(20, 22, 24, 26, 28),
+    position: 'relative',
+    overflow: 'hidden',
   },
-  backgroundButtonGlass: {
-    width: getResponsiveSize(48, 52, 56, 60, 64),
-    height: getResponsiveSize(48, 52, 56, 60, 64),
-    borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
+  backgroundButtonBlur: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: getResponsiveSize(20, 22, 24, 26, 28),
   },
   backgroundButtonText: {
-    fontSize: getResponsiveSize(13, 14, 15, 16, 17),
-    fontFamily: 'Inter-Medium',
+    fontSize: getResponsiveSize(15, 16, 17, 18, 19),
+    fontFamily: 'Inter-SemiBold',
+    fontWeight: '600',
+    color: '#FFFFFF',
     textAlign: 'center',
   },
 
-  // Form Container
-  formContainer: {
-    marginTop: getResponsiveSpacing(isShortDevice ? 20 : 30),
+  // Main Content
+  mainContent: {
+    flex: 1,
     paddingHorizontal: getResponsiveSpacing(20),
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: getResponsiveSpacing(30),
     gap: getResponsiveSpacing(16),
   },
 
-  // Title Input
-  titleContainer: {
-    position: 'relative',
-    borderRadius: getResponsiveSize(16, 18, 20, 22, 24),
-    overflow: 'hidden',
-  },
-  titleGlassBackground: {
+  // Translucent Card Styles
+  cardBlur: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: getResponsiveSize(16, 18, 20, 22, 24),
-    borderWidth: 1,
   },
-  titleInput: {
-    paddingHorizontal: getResponsiveSpacing(20),
-    paddingVertical: getResponsiveSpacing(isShortDevice ? 16 : 20),
-    fontSize: getResponsiveSize(20, 24, 28, 32, 36),
-    fontFamily: 'Inter-Bold',
-    textAlign: 'center',
+  cardGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
-  titleContent: {
+
+  // Connected Card Structure
+  connectedCard: {
+    borderRadius: getResponsiveSize(20, 22, 24, 26, 28),
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+
+  // Title Section (Top of connected card)
+  titleSection: {
     paddingHorizontal: getResponsiveSpacing(20),
-    paddingVertical: getResponsiveSpacing(isShortDevice ? 16 : 20),
-    justifyContent: 'center',
+    paddingVertical: getResponsiveSpacing(28),
+    position: 'relative',
+    overflow: 'hidden',
     alignItems: 'center',
-    minHeight: getResponsiveSize(56, 60, 64, 68, 72),
+    justifyContent: 'center',
+    minHeight: getResponsiveSize(100, 110, 120, 130, 140),
   },
   titleText: {
+    fontSize: getResponsiveSize(24, 26, 28, 30, 32),
+    fontFamily: 'Inter-Bold',
+    fontWeight: '700',
     textAlign: 'center',
-    lineHeight: getResponsiveSize(24, 28, 32, 36, 40),
+    lineHeight: getResponsiveSize(30, 34, 38, 42, 46),
+    letterSpacing: 0.3,
+    maxWidth: '100%',
+    flexWrap: 'wrap',
   },
 
-  // Section Cards
-  sectionCard: {
+  // Detail Sections (Middle parts of connected card)
+  detailSection: {
     position: 'relative',
-    borderRadius: getResponsiveSize(14, 16, 18, 20, 22),
     overflow: 'hidden',
+    paddingHorizontal: getResponsiveSpacing(24),
+    paddingVertical: getResponsiveSpacing(16),
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
-  sectionGlassBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: getResponsiveSize(14, 16, 18, 20, 22),
-    borderWidth: 1,
+  locationSection: {
+    position: 'relative',
+    overflow: 'hidden',
+    paddingHorizontal: getResponsiveSpacing(24),
+    paddingVertical: getResponsiveSpacing(16),
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
-  sectionContent: {
+  detailContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: getResponsiveSpacing(16),
-    paddingVertical: getResponsiveSpacing(16),
-    gap: getResponsiveSpacing(12),
+    gap: getResponsiveSpacing(16),
   },
-  sectionIcon: {
-    width: getResponsiveSize(36, 40, 44, 48, 52),
-    height: getResponsiveSize(36, 40, 44, 48, 52),
-    borderRadius: getResponsiveSize(8, 9, 10, 11, 12),
-    justifyContent: 'center',
+  detailIconContainer: {
+    width: getResponsiveSize(24, 26, 28, 30, 32),
     alignItems: 'center',
   },
-  sectionText: {
+  detailText: {
     flex: 1,
-    fontSize: getResponsiveSize(15, 16, 17, 18, 19),
+    fontSize: getResponsiveSize(16, 17, 18, 19, 20),
     fontFamily: 'Inter-Medium',
+    fontWeight: '500',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
 
-  // Host Section
-  hostContainer: {
-    paddingHorizontal: getResponsiveSpacing(20),
-    marginTop: getResponsiveSpacing(16),
-  },
+  // Host Card
   hostCard: {
-    position: 'relative',
-    borderRadius: getResponsiveSize(14, 16, 18, 20, 22),
+    borderRadius: getResponsiveSize(20, 22, 24, 26, 28),
     overflow: 'hidden',
-  },
-  hostGlassBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: getResponsiveSize(14, 16, 18, 20, 22),
-    borderWidth: 1,
+    position: 'relative',
+    paddingHorizontal: getResponsiveSpacing(20),
+    paddingVertical: getResponsiveSpacing(20),
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   hostContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: getResponsiveSpacing(16),
-    paddingVertical: getResponsiveSpacing(16),
-    gap: getResponsiveSpacing(12),
+    gap: getResponsiveSpacing(16),
   },
   hostAvatar: {
-    width: getResponsiveSize(42, 46, 50, 54, 58),
-    height: getResponsiveSize(42, 46, 50, 54, 58),
-    borderRadius: getResponsiveSize(21, 23, 25, 27, 29),
-    overflow: 'hidden',
-  },
-  avatarPlaceholder: {
-    flex: 1,
+    width: getResponsiveSize(48, 52, 56, 60, 64),
+    height: getResponsiveSize(48, 52, 56, 60, 64),
+    borderRadius: getResponsiveSize(24, 26, 28, 30, 32),
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarText: {
-    fontSize: getResponsiveSize(14, 15, 16, 17, 18),
+  hostAvatarText: {
+    fontSize: getResponsiveSize(16, 17, 18, 19, 20),
     fontFamily: 'Inter-Bold',
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   hostInfo: {
     flex: 1,
   },
   hostName: {
-    fontSize: getResponsiveSize(15, 16, 17, 18, 19),
+    fontSize: getResponsiveSize(16, 17, 18, 19, 20),
     fontFamily: 'Inter-SemiBold',
-    marginBottom: getResponsiveSpacing(2),
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: getResponsiveSpacing(4),
+    letterSpacing: 0.2,
   },
   hostDescription: {
-    fontSize: getResponsiveSize(13, 14, 15, 16, 17),
+    fontSize: getResponsiveSize(14, 15, 16, 17, 18),
     fontFamily: 'Inter-Regular',
+    color: 'rgba(255, 255, 255, 0.8)',
     lineHeight: getResponsiveSize(18, 20, 22, 24, 26),
+    letterSpacing: 0.1,
   },
 
-  // Create Button
-  createButtonContainer: {
-    paddingHorizontal: getResponsiveSpacing(20),
-    paddingBottom: getResponsiveSpacing(isShortDevice ? 16 : 24),
-    marginTop: 'auto',
-  },
-  createButton: {
-    borderRadius: getResponsiveSize(14, 16, 18, 20, 22),
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: 'rgba(0, 0, 0, 0.3)',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 1,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 6,
-      },
-    }),
-  },
-  createButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: getResponsiveSpacing(16),
-    gap: getResponsiveSpacing(8),
-  },
-  createButtonText: {
-    fontSize: getResponsiveSize(15, 16, 17, 18, 19),
-    fontFamily: 'Inter-Bold',
-    color: '#FFFFFF',
-  },
 
-  // Title Input Modal Styles
+
+  // Title Input Modal Styles (Complete Implementation)
   titleInputModal: {
     flex: 1,
   },
@@ -1640,25 +1486,22 @@ const styles = StyleSheet.create({
     lineHeight: getResponsiveSize(24, 28, 32, 36, 40),
   },
 
-  // Text Styling Components - Responsive
+  // Text Styling Components
   stylingContainer: {
     flex: 1,
     marginTop: getResponsiveSpacing(20),
   },
   
-  // Section Styles
   sectionTitle: {
     fontSize: getResponsiveSize(14, 15, 16, 17, 18),
     fontWeight: '600',
     marginBottom: getResponsiveSpacing(12),
   },
 
-  // Quick Format Section
   quickFormatSection: {
-    marginHorizontal: getResponsiveSpacing(20),
+    marginBottom: getResponsiveSpacing(20),
     borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
     padding: getResponsiveSpacing(16),
-    marginBottom: getResponsiveSpacing(16),
   },
   quickFormatRow: {
     flexDirection: 'row',
@@ -1678,12 +1521,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Alignment Section
   alignmentSection: {
-    marginHorizontal: getResponsiveSpacing(20),
+    marginBottom: getResponsiveSpacing(20),
     borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
     padding: getResponsiveSpacing(16),
-    marginBottom: getResponsiveSpacing(16),
   },
   alignmentRow: {
     flexDirection: 'row',
@@ -1703,12 +1544,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Font Size Section
   fontSizeSection: {
-    marginHorizontal: getResponsiveSpacing(20),
+    marginBottom: getResponsiveSpacing(20),
     borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
     padding: getResponsiveSpacing(16),
-    marginBottom: getResponsiveSpacing(16),
   },
   fontSizeController: {
     flexDirection: 'row',
@@ -1741,13 +1580,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
+  fontSizeHelper: {
+    fontSize: getResponsiveSize(11, 12, 13, 14, 15),
+    textAlign: 'center',
+    marginTop: getResponsiveSpacing(8),
+  },
 
-  // Font Weight Section
   fontWeightSection: {
-    marginHorizontal: getResponsiveSpacing(20),
+    marginBottom: getResponsiveSpacing(20),
     borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
     padding: getResponsiveSpacing(16),
-    marginBottom: getResponsiveSpacing(16),
   },
   fontWeightOptions: {
     gap: getResponsiveSpacing(8),
@@ -1763,12 +1605,10 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveSize(14, 15, 16, 17, 18),
   },
 
-  // Color Section
   colorSection: {
-    marginHorizontal: getResponsiveSpacing(20),
+    marginBottom: getResponsiveSpacing(20),
     borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
     padding: getResponsiveSpacing(16),
-    marginBottom: getResponsiveSpacing(16),
   },
   colorPickerContainer: {
     alignItems: 'center',
@@ -1780,240 +1620,161 @@ const styles = StyleSheet.create({
     maxWidth: Math.min(SCREEN_WIDTH - getResponsiveSpacing(80), scale(320)),
   },
 
-  // Font Size Helper Text
-  fontSizeHelper: {
-    fontSize: getResponsiveSize(11, 12, 13, 14, 15),
-    textAlign: 'center',
-    marginTop: getResponsiveSpacing(8),
-  },
 
-  // Invitation Preview Styles
-  invitationPreviewContainer: {
+
+  // Preview Modal Styles
+  previewBackground: {
+    flex: 1,
+    resizeMode: 'cover',
+    justifyContent: 'center',
+  },
+  previewGradientOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  previewContainer: {
     flex: 1,
   },
-  invitationSafeArea: {
-    flex: 1,
-  },
-  invitationHeader: {
+  previewHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: getResponsiveSpacing(20),
-    paddingTop: getResponsiveSpacing(12),
+    padding: getResponsiveSpacing(16),
+  },
+  previewBackButton: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: getResponsiveSpacing(12),
+    borderRadius: getResponsiveSize(22, 24, 26, 28, 30),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewNextButton: {
+    backgroundColor: 'white',
+    paddingVertical: getResponsiveSpacing(10),
+    paddingHorizontal: getResponsiveSpacing(24),
+    borderRadius: getResponsiveSize(22, 24, 26, 28, 30),
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  previewNextButtonText: {
+    color: '#333',
+    fontWeight: '600',
+    fontSize: getResponsiveSize(13, 14, 15, 16, 17),
+    fontFamily: 'Inter-SemiBold',
+  },
+  previewContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: getResponsiveSpacing(24),
+    paddingTop: getResponsiveSpacing(16),
     paddingBottom: getResponsiveSpacing(8),
   },
-  invitationCloseButton: {
-    width: getResponsiveSize(38, 42, 46, 50, 54),
-    height: getResponsiveSize(38, 42, 46, 50, 54),
-    borderRadius: getResponsiveSize(19, 21, 23, 25, 27),
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-  },
-  invitationScroll: {
-    flex: 1,
-  },
-  invitationScrollContent: {
-    paddingHorizontal: getResponsiveSpacing(20),
-    paddingTop: getResponsiveSpacing(20),
-    paddingBottom: getResponsiveSpacing(40),
-  },
-  invitationCard: {
-    borderRadius: getResponsiveSize(16, 18, 20, 22, 24),
-    padding: getResponsiveSpacing(20),
-    marginBottom: getResponsiveSpacing(20),
-    borderWidth: 1,
-  },
-  invitationCardHeader: {
-    borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
-    padding: getResponsiveSpacing(16),
-    marginBottom: getResponsiveSpacing(16),
-    borderWidth: 1,
-  },
-  invitationLabel: {
-    fontSize: getResponsiveSize(14, 15, 16, 17, 18),
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  invitationEventTitle: {
-    fontSize: getResponsiveSize(16, 17, 18, 19, 20),
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: getResponsiveSpacing(10),
-  },
-  invitationDetailsSection: {
-    borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
-    padding: getResponsiveSpacing(16),
-    marginBottom: getResponsiveSpacing(16),
-    borderWidth: 1,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: getResponsiveSpacing(16),
-    gap: getResponsiveSpacing(12),
-  },
-  detailIconContainer: {
-    width: getResponsiveSize(36, 40, 44, 48, 52),
-    height: getResponsiveSize(36, 40, 44, 48, 52),
-    borderRadius: getResponsiveSize(8, 9, 10, 11, 12),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  detailContent: {
-    flex: 1,
-  },
-  detailLabel: {
-    fontSize: getResponsiveSize(14, 15, 16, 17, 18),
-    fontWeight: '600',
-    marginBottom: getResponsiveSpacing(4),
-  },
-  detailValue: {
-    fontSize: getResponsiveSize(16, 17, 18, 19, 20),
-    fontFamily: 'Inter-Medium',
-  },
-  invitationHostSection: {
-    borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
-    padding: getResponsiveSpacing(16),
-    marginBottom: getResponsiveSpacing(16),
-    borderWidth: 1,
-  },
-  hostRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: getResponsiveSpacing(12),
-  },
-  hostAvatarLarge: {
-    width: getResponsiveSize(48, 52, 56, 60, 64),
-    height: getResponsiveSize(48, 52, 56, 60, 64),
-    borderRadius: getResponsiveSize(24, 26, 28, 30, 32),
-    overflow: 'hidden',
-  },
-  hostAvatarGradient: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  hostAvatarLargeText: {
-    fontSize: getResponsiveSize(16, 17, 18, 19, 20),
+  previewTitle: {
+    fontSize: getResponsiveSize(36, 40, 44, 48, 52),
     fontFamily: 'Inter-Bold',
-  },
-  hostDetails: {
-    flex: 1,
-  },
-  hostTitle: {
-    fontSize: getResponsiveSize(14, 15, 16, 17, 18),
-    fontWeight: '600',
-    marginBottom: getResponsiveSpacing(4),
-  },
-  hostNameLarge: {
-    fontSize: getResponsiveSize(16, 17, 18, 19, 20),
-    fontFamily: 'Inter-SemiBold',
-  },
-  hostDescriptionLarge: {
-    fontSize: getResponsiveSize(14, 15, 16, 17, 18),
-    fontFamily: 'Inter-Regular',
-    lineHeight: getResponsiveSize(20, 22, 24, 26, 28),
-  },
-  rsvpSectionMain: {
-    borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
-    padding: getResponsiveSpacing(16),
-    marginBottom: getResponsiveSpacing(16),
-    borderWidth: 1,
-  },
-  rsvpQuestion: {
-    fontSize: getResponsiveSize(16, 17, 18, 19, 20),
-    fontFamily: 'Inter-SemiBold',
-    textAlign: 'center',
-    marginBottom: getResponsiveSpacing(16),
-  },
-  rsvpButtonsContainer: {
-    flexDirection: 'row',
-    gap: getResponsiveSpacing(12),
-    justifyContent: 'center',
-  },
-  rsvpButtonMain: {
-    flex: 1,
-    paddingVertical: getResponsiveSpacing(12),
-    borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  rsvpButtonGoing: {
-    // Additional styles for going button
-  },
-  rsvpButtonNotGoing: {
-    // Additional styles for not going button
-  },
-  rsvpButtonMaybe: {
-    // Additional styles for maybe button
-  },
-  rsvpButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: getResponsiveSpacing(12),
-    gap: getResponsiveSpacing(8),
-  },
-  rsvpButtonLabel: {
-    fontSize: getResponsiveSize(14, 15, 16, 17, 18),
-    fontFamily: 'Inter-SemiBold',
-    color: '#FFFFFF',
-  },
-  rsvpButtonIcon: {
-    color: '#FFFFFF',
     fontWeight: '700',
-  },
-  rsvpNote: {
-    fontSize: getResponsiveSize(12, 13, 14, 15, 16),
-    fontFamily: 'Inter-Regular',
+    color: 'white',
+    marginBottom: getResponsiveSpacing(12),
     textAlign: 'center',
-    marginTop: getResponsiveSpacing(12),
+    lineHeight: getResponsiveSize(42, 48, 54, 60, 66),
   },
-  invitationFooterMain: {
-    borderRadius: getResponsiveSize(12, 14, 16, 18, 20),
-    padding: getResponsiveSpacing(16),
-    marginBottom: getResponsiveSpacing(20),
-    borderWidth: 1,
+  previewSubtitle: {
+    fontSize: getResponsiveSize(16, 17, 18, 19, 20),
+    color: 'white',
+    marginBottom: getResponsiveSpacing(4),
+    textAlign: 'center',
+    fontFamily: 'Inter-Medium',
+    fontWeight: '500',
   },
-  footerRow: {
+  previewLocation: {
+    fontSize: getResponsiveSize(14, 15, 16, 17, 18),
+    color: 'white',
+    marginBottom: getResponsiveSpacing(24),
+    textAlign: 'center',
+    fontFamily: 'Inter-Regular',
+  },
+  previewHostInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: getResponsiveSpacing(8),
-    marginBottom: getResponsiveSpacing(12),
+    marginBottom: getResponsiveSpacing(8),
   },
-  footerAvatarSmall: {
-    width: getResponsiveSize(24, 26, 28, 30, 32),
-    height: getResponsiveSize(24, 26, 28, 30, 32),
-    borderRadius: getResponsiveSize(12, 13, 14, 15, 16),
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+  previewHostAvatar: {
+    width: getResponsiveSize(36, 38, 40, 42, 44),
+    height: getResponsiveSize(36, 38, 40, 42, 44),
+    borderRadius: getResponsiveSize(18, 19, 20, 21, 22),
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderWidth: 2,
+    borderColor: 'white',
+    marginRight: getResponsiveSpacing(12),
     justifyContent: 'center',
     alignItems: 'center',
   },
-  footerAvatarText: {
-    fontSize: getResponsiveSize(10, 11, 12, 13, 14),
-    fontFamily: 'Inter-Bold',
-  },
-  footerHostText: {
-    fontSize: getResponsiveSize(12, 13, 14, 15, 16),
-    fontFamily: 'Inter-Medium',
-  },
-  footerDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    marginVertical: getResponsiveSpacing(8),
-  },
-  footerBrand: {
-    alignItems: 'center',
-  },
-  brandText: {
+  previewHostAvatarText: {
     fontSize: getResponsiveSize(14, 15, 16, 17, 18),
     fontFamily: 'Inter-Bold',
-    marginBottom: getResponsiveSpacing(4),
+    fontWeight: '700',
+    color: 'white',
   },
-  brandTagline: {
-    fontSize: getResponsiveSize(12, 13, 14, 15, 16),
+  previewHostName: {
+    fontSize: getResponsiveSize(13, 14, 15, 16, 17),
+    fontWeight: '500',
+    color: 'white',
+    fontFamily: 'Inter-Medium',
+  },
+  previewDescription: {
+    fontSize: getResponsiveSize(13, 14, 15, 16, 17),
+    color: '#E5E7EB',
+    marginBottom: getResponsiveSpacing(32),
+    textAlign: 'center',
+    paddingHorizontal: getResponsiveSpacing(16),
     fontFamily: 'Inter-Regular',
+    lineHeight: getResponsiveSize(18, 20, 22, 24, 26),
+  },
+  previewRsvpContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: getResponsiveSize(14, 16, 18, 20, 22),
+    padding: getResponsiveSpacing(20),
+    width: '100%',
+  },
+  previewRsvpOptions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  previewRsvpOption: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: getResponsiveSpacing(12),
+    paddingHorizontal: getResponsiveSpacing(8),
+    borderRadius: getResponsiveSize(10, 12, 14, 16, 18),
+  },
+  previewRsvpOptionText: {
+    fontSize: getResponsiveSize(13, 14, 15, 16, 17),
+    fontWeight: '500',
+    color: 'white',
+    marginTop: getResponsiveSpacing(6),
+    fontFamily: 'Inter-Medium',
+  },
+  previewRsvpOptionIcon: {
+    color: 'white',
+    fontWeight: '700',
+    textAlign: 'center',
+    fontFamily: 'Inter-Bold',
+  },
+  previewRsvpDivider: {
+    height: getResponsiveSize(44, 46, 48, 50, 52),
+    width: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
 }); 
