@@ -38,6 +38,10 @@ import {
   FileText,
   Eye,
   ArrowLeft,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  ChevronDown,
 } from 'lucide-react-native';
 import { DateTimePickerModal } from './DateTimePickerModal';
 import { LocationPickerModal } from './LocationPickerModal';
@@ -54,7 +58,7 @@ interface TextStyle {
   color: string;
   fontSize: number;
   fontFamily: string;
-  fontWeight: '400' | '500' | '600' | '700' | '800';
+  fontWeight: '300' | '400' | '500' | '600' | '700' | '800' | '900';
   textAlign: 'left' | 'center' | 'right';
   fontStyle: 'normal' | 'italic';
   textDecorationLine: 'none' | 'underline' | 'line-through' | 'underline line-through';
@@ -131,52 +135,170 @@ interface EventData {
     return Math.min(fontSize, 32);
   };
 
-// Helper function to get proper font family for weight and style
+// Font weight support mapping for each font family
+const getFontWeightOptions = (fontFamily: string) => {
+  const weightMap: { [key: string]: Array<{ weight: string; label: string; available: boolean }> } = {
+    // Sans-serif fonts - good weight support
+    'System': [
+      { weight: '300', label: 'Light', available: true },
+      { weight: '400', label: 'Regular', available: true },
+      { weight: '500', label: 'Medium', available: true },
+      { weight: '600', label: 'SemiBold', available: true },
+      { weight: '700', label: 'Bold', available: true },
+      { weight: '800', label: 'ExtraBold', available: true }
+    ],
+    'Arial': [
+      { weight: '400', label: 'Regular', available: true },
+      { weight: '500', label: 'Medium', available: true },
+      { weight: '600', label: 'SemiBold', available: true },
+      { weight: '700', label: 'Bold', available: true }
+    ],
+    'Helvetica': [
+      { weight: '300', label: 'Light', available: true },
+      { weight: '400', label: 'Regular', available: true },
+      { weight: '500', label: 'Medium', available: true },
+      { weight: '700', label: 'Bold', available: true }
+    ],
+    'Verdana': [
+      { weight: '400', label: 'Regular', available: true },
+      { weight: '700', label: 'Bold', available: true }
+    ],
+    'Trebuchet MS': [
+      { weight: '400', label: 'Regular', available: true },
+      { weight: '700', label: 'Bold', available: true }
+    ],
+    'sans-serif': [
+      { weight: '300', label: 'Light', available: true },
+      { weight: '400', label: 'Regular', available: true },
+      { weight: '500', label: 'Medium', available: true },
+      { weight: '600', label: 'SemiBold', available: true },
+      { weight: '700', label: 'Bold', available: true },
+      { weight: '800', label: 'ExtraBold', available: true }
+    ],
+    
+    // Serif fonts - varied support
+    'Times New Roman': [
+      { weight: '400', label: 'Regular', available: true },
+      { weight: '700', label: 'Bold', available: true }
+    ],
+    'Georgia': [
+      { weight: '400', label: 'Regular', available: true },
+      { weight: '700', label: 'Bold', available: true }
+    ],
+    'Palatino': [
+      { weight: '400', label: 'Regular', available: true },
+      { weight: '500', label: 'Medium', available: true },
+      { weight: '700', label: 'Bold', available: true }
+    ],
+    'serif': [
+      { weight: '400', label: 'Regular', available: true },
+      { weight: '700', label: 'Bold', available: true }
+    ],
+    
+    // Monospace fonts - limited support
+    'Courier': [
+      { weight: '400', label: 'Regular', available: true },
+      { weight: '700', label: 'Bold', available: true }
+    ],
+    'Courier New': [
+      { weight: '400', label: 'Regular', available: true },
+      { weight: '700', label: 'Bold', available: true }
+    ],
+    'Menlo': [
+      { weight: '400', label: 'Regular', available: true },
+      { weight: '700', label: 'Bold', available: true }
+    ],
+    'monospace': [
+      { weight: '400', label: 'Regular', available: true },
+      { weight: '700', label: 'Bold', available: true }
+    ],
+    
+    // Display fonts - unique characteristics
+    'Impact': [
+      { weight: '400', label: 'Regular', available: true },
+      { weight: '700', label: 'Bold', available: true },
+      { weight: '900', label: 'Black', available: true }
+    ],
+    'American Typewriter': [
+      { weight: '400', label: 'Regular', available: true },
+      { weight: '600', label: 'SemiBold', available: true },
+      { weight: '700', label: 'Bold', available: true }
+    ],
+    'Copperplate': [
+      { weight: '400', label: 'Regular', available: true },
+      { weight: '700', label: 'Bold', available: true }
+    ],
+    'fantasy': [
+      { weight: '400', label: 'Regular', available: true },
+      { weight: '700', label: 'Bold', available: true }
+    ],
+    
+    // Handwriting fonts - usually single weight
+    'Snell Roundhand': [
+      { weight: '400', label: 'Regular', available: true }
+    ],
+    'Marker Felt': [
+      { weight: '400', label: 'Regular', available: true }
+    ],
+    'cursive': [
+      { weight: '400', label: 'Regular', available: true }
+    ]
+  };
+  
+  return weightMap[fontFamily] || [
+    { weight: '400', label: 'Regular', available: true },
+    { weight: '700', label: 'Bold', available: true }
+  ];
+};
+
+// Helper function to get proper font family display name
 const getFontDisplayName = (fontFamily: string) => {
   const fontMap: { [key: string]: string } = {
-    'Inter-Regular': 'Inter Regular',
-    'Inter-Medium': 'Inter Medium',
-    'Inter-SemiBold': 'Inter SemiBold', 
-    'Inter-Bold': 'Inter Bold',
-    'Inter-ExtraBold': 'Inter ExtraBold',
-    'System': 'System Font',
+    // Sans-serif fonts
+    'System': 'System',
     'Arial': 'Arial',
-    'Helvetica': 'Helvetica',
+    'Helvetica': 'Helvetica', 
     'Verdana': 'Verdana',
     'Trebuchet MS': 'Trebuchet MS',
+    'sans-serif': 'System', // Android fallback
+    
+    // Serif fonts
     'Times New Roman': 'Times New Roman',
     'Georgia': 'Georgia',
     'Palatino': 'Palatino',
+    'serif': 'Times New Roman', // Android fallback
+    
+    // Monospace fonts
     'Courier': 'Courier',
     'Courier New': 'Courier New',
     'Menlo': 'Menlo',
+    'monospace': 'Courier', // Android fallback
+    
+    // Display fonts
     'Impact': 'Impact',
     'American Typewriter': 'American Typewriter',
     'Copperplate': 'Copperplate',
-    'Zapfino': 'Zapfino',
+    'fantasy': 'Impact', // Android fallback
+    
+    // Handwriting fonts
     'Snell Roundhand': 'Snell Roundhand',
     'Marker Felt': 'Marker Felt',
-    'sans-serif': 'Sans Serif',
-    'serif': 'Serif',
-    'monospace': 'Monospace',
-    'cursive': 'Cursive',
-    'fantasy': 'Fantasy'
+    'cursive': 'Snell Roundhand', // Android fallback
   };
-  return fontMap[fontFamily] || 'Select Font Style';
+  
+  return fontMap[fontFamily] || fontFamily || 'System';
+};
+
+// Helper to get the current weight label
+const getWeightLabel = (fontFamily: string, weight: string) => {
+  const options = getFontWeightOptions(fontFamily);
+  const option = options.find(opt => opt.weight === weight);
+  return option?.label || 'Regular';
 };
 
 const getFontFamily = (baseFamily: string, fontWeight: string, fontStyle: string) => {
-  if (fontStyle === 'italic') {
-    // For italic, we need to use Inter-Italic variants
-    switch (fontWeight) {
-      case '400': return 'Inter-Italic';
-      case '500': return 'Inter-MediumItalic';
-      case '600': return 'Inter-SemiBoldItalic';
-      case '700': return 'Inter-BoldItalic';
-      case '800': return 'Inter-ExtraBoldItalic';
-      default: return 'Inter-Italic';
-    }
-  }
+  // All fonts now support all weights, italic, and underline through CSS properties
+  // No special font family variants needed - React Native handles this automatically
   return baseFamily;
 };
 
@@ -213,6 +335,17 @@ const backgroundImages = {
   winterSnowyForest: require('@/assets/images/invites/Winter Snowy Forest Magic in the Air Quote Phone Wallpaper.png'),
   yellowGreenNature: require('@/assets/images/invites/Yellow and Green Watercolor Illustration Nature View Phone Wallpaper.png'),
   yellowWhiteGreenFlower: require('@/assets/images/invites/Yellow White and Green Aesthetic Flower Wallpaper Phone .png'),
+  tealIndianElephant: require('@/assets/images/invites/Teal Colorful Illustrative Indian Elephant Phone Wallpaper.png'),
+  blueArtsyBaby: require('@/assets/images/invites/Blue Artsy Baby Announcement Phone Wallpaper.png'),
+  pinkArtsyBaby: require('@/assets/images/invites/Pink Artsy Baby Announcement Phone Wallpaper.png'),
+  purpleFloralDiwali: require('@/assets/images/invites/Purple Illustrated Floral Diwali Phone Wallpaper.png'),
+  loveHeartBalloons: require('@/assets/images/invites/Love Heart Balloons  watercolor phone wallpaper.png'),
+  fondoAzulCumple: require('@/assets/images/invites/FondoDePantallaMovilInvitacionCumpleanosSimpleAzul.png'),
+  greenYellowBlueRetro: require('@/assets/images/invites/Green Yellow and Blue Retro Cartoon Party Phone Wallpaper.png'),
+  blueOrangeGreenCelebration: require('@/assets/images/invites/Blue Orange and Green Playful Celebration Phone Wallpaper.png'),
+  birthdayInvitation1: require('@/assets/images/invites/Birthday Invitation (Phone Wallpaper).png'),
+  birthdayInvitation2: require('@/assets/images/invites/Birthday Invitation (Phone Wallpaper another.png'),
+  happyBirthday: require('@/assets/images/invites/Happy Birthday (Phone Wallpaper).png'),
 };
 
 // Helper function to get background image source from background ID
@@ -269,6 +402,8 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
   const [showTitleInput, setShowTitleInput] = useState(false);
   const [showInvitationPreview, setShowInvitationPreview] = useState(false);
   const [showTextStylePicker, setShowTextStylePicker] = useState(false);
+  const [showFontWeightDropdown, setShowFontWeightDropdown] = useState(false);
+  const [showFontFamilyDropdown, setShowFontFamilyDropdown] = useState(false);
 
   // Animation values
   const headerOpacity = useSharedValue(0);
@@ -388,6 +523,49 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
     setShowTextStylePicker(false);
   };
 
+  // Helper to close all dropdowns
+  const closeAllDropdowns = () => {
+    setShowFontFamilyDropdown(false);
+    setShowFontWeightDropdown(false);
+  };
+
+  // Helper to change font family while preserving other styling
+  const handleFontFamilyChange = (newFontFamily: string) => {
+    setEventData(prev => {
+      const availableWeights = getFontWeightOptions(newFontFamily);
+      const currentWeight = prev.titleStyle.fontWeight;
+      
+      // Check if current weight is available for new font family
+      const isCurrentWeightAvailable = availableWeights.some(opt => opt.weight === currentWeight);
+      
+      // If current weight isn't available, use the first available weight
+      const newWeight = isCurrentWeightAvailable ? currentWeight : availableWeights[0].weight;
+      
+      return {
+        ...prev,
+        titleStyle: {
+          ...prev.titleStyle,
+          fontFamily: newFontFamily,
+          fontWeight: newWeight as '300' | '400' | '500' | '600' | '700' | '800' | '900'
+        }
+      };
+    });
+    setShowFontFamilyDropdown(false);
+  };
+
+  // Helper to change font weight while preserving font family and other styling
+  const handleFontWeightChange = (newFontWeight: '300' | '400' | '500' | '600' | '700' | '800' | '900') => {
+    setEventData(prev => ({
+      ...prev,
+      titleStyle: {
+        ...prev.titleStyle,
+        fontWeight: newFontWeight
+        // Keep existing fontFamily, fontStyle, etc.
+      }
+    }));
+    setShowFontWeightDropdown(false);
+  };
+
   const formatDateTime = () => {
     if (!eventData.date) return 'Date and Time';
     
@@ -425,9 +603,11 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
             style={styles.previewBackButton}
             onPress={() => setShowInvitationPreview(false)}
           >
+            <BlurView intensity={80} tint="dark" style={styles.previewButtonBlur} />
             <ArrowLeft size={getResponsiveSize(18, 20, 22, 24, 26)} color="white" strokeWidth={2} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.previewNextButton}>
+            <BlurView intensity={60} tint="dark" style={styles.previewNextButtonBlur} />
             <Text style={styles.previewNextButtonText}>Next</Text>
           </TouchableOpacity>
         </View>
@@ -435,24 +615,23 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
         {/* Content */}
         <View style={styles.previewContent}>
           {/* Event Title */}
-          <Text style={[
-            styles.previewTitle,
-            {
-              color: eventData.title ? eventData.titleStyle.color : '#FFFFFF',
-              fontSize: moderateScale(Math.min(eventData.titleStyle.fontSize * 1.2, 48)),
-              fontFamily: getFontFamily(
-                eventData.titleStyle.fontFamily, 
-                eventData.titleStyle.fontWeight, 
-                eventData.titleStyle.fontStyle
-              ),
-              fontWeight: eventData.titleStyle.fontWeight,
-              textAlign: eventData.titleStyle.textAlign,
-              fontStyle: eventData.titleStyle.fontStyle,
-              textDecorationLine: eventData.titleStyle.textDecorationLine,
-            }
-          ]} numberOfLines={3}>
-            {eventData.title || 'Event Title'}
-          </Text>
+          <View style={styles.previewTitleContainer}>
+            <Text style={[
+              styles.previewTitle,
+              {
+                color: eventData.title ? eventData.titleStyle.color : '#FFFFFF',
+                fontSize: moderateScale(Math.min(eventData.titleStyle.fontSize * 1.1, 35)),
+                fontFamily: eventData.titleStyle.fontFamily,
+                fontWeight: eventData.titleStyle.fontWeight,
+                textAlign: eventData.titleStyle.textAlign,
+                fontStyle: eventData.titleStyle.fontStyle,
+                textDecorationLine: eventData.titleStyle.textDecorationLine,
+                lineHeight: moderateScale(Math.min(eventData.titleStyle.fontSize * 1.1, 35) * 1.2),
+              }
+            ]} numberOfLines={eventData.titleStyle.fontSize > 26 ? 2 : 3}>
+              {eventData.title || 'Event Title'}
+            </Text>
+          </View>
 
           {/* Date & Time */}
           <Text style={styles.previewSubtitle}>
@@ -546,10 +725,10 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
                 return (
           <LinearGradient
                     colors={[backgroundSource, backgroundSource + 'E6', backgroundSource + 'CC']}
-                    style={styles.gradientBackground}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  />
+            style={styles.gradientBackground}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          />
                 );
               } else {
                 return (
@@ -561,14 +740,13 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
                 );
               }
             } else {
-              // Default dark background when no image
+              // Default background image when no image is selected
               return (
-                <LinearGradient
-                  colors={['#1a1a1a', '#2a2a2a', '#1a1a1a']}
-            style={styles.gradientBackground}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
+                <Image
+                  source={require('@/assets/images/invites/default.png')}
+                  style={styles.backgroundImage}
+                  resizeMode="cover"
+                />
               );
             }
           })()}
@@ -636,25 +814,23 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                     />
-                  <Text style={[
-                    styles.titleText,
-                    {
-                      color: eventData.title ? eventData.titleStyle.color : 'rgba(255,255,255,0.7)',
-                      fontSize: moderateScale(getDisplayFontSize(eventData.titleStyle.fontSize)),
-                      fontFamily: getFontFamily(
-                        eventData.titleStyle.fontFamily, 
-                        eventData.titleStyle.fontWeight, 
-                        eventData.titleStyle.fontStyle
-                      ),
-                      fontWeight: eventData.titleStyle.fontWeight,
-                      textAlign: eventData.titleStyle.textAlign,
-                      fontStyle: eventData.titleStyle.fontStyle,
-                      textDecorationLine: eventData.titleStyle.textDecorationLine,
-                      lineHeight: moderateScale(getDisplayFontSize(eventData.titleStyle.fontSize) * 1.2),
-                    }
-                  ]} numberOfLines={eventData.titleStyle.fontSize > 26 ? 2 : 3}>
-                    {eventData.title || 'Event Title *'}
-                  </Text>
+                  <View style={styles.titleTextContainer}>
+                    <Text style={[
+                      styles.titleText,
+                      {
+                        color: eventData.title ? eventData.titleStyle.color : 'rgba(255,255,255,0.7)',
+                        fontSize: moderateScale(Math.min(eventData.titleStyle.fontSize, 32)),
+                        fontFamily: eventData.titleStyle.fontFamily,
+                        fontWeight: eventData.titleStyle.fontWeight,
+                        textAlign: eventData.titleStyle.textAlign,
+                        fontStyle: eventData.titleStyle.fontStyle,
+                        textDecorationLine: eventData.titleStyle.textDecorationLine,
+                        lineHeight: moderateScale(Math.min(eventData.titleStyle.fontSize, 32) * 1.3),
+                      }
+                    ]} numberOfLines={eventData.titleStyle.fontSize > 26 ? 2 : 3}>
+                      {eventData.title || 'Event Title *'}
+                    </Text>
+            </View>
                 </TouchableOpacity>
 
                                   {/* Date & Time Section */}
@@ -747,7 +923,7 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
           </Animated.View>
         </SafeAreaView>
 
-        {/* Complete Title Input Modal */}
+        {/* Clean Title Input Modal */}
         <Modal
           visible={showTitleInput}
           animationType="slide"
@@ -759,357 +935,521 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
             backgroundColor={theme.background} 
             translucent={false}
           />
-          <View style={[styles.titleInputModal, { backgroundColor: theme.background }]}>
+          <View style={[styles.titleInputModal, { backgroundColor: theme.isDark ? '#f3f4f6' : '#f3f4f6' }]}>
             <SafeAreaView style={styles.modalSafeArea} edges={['top', 'bottom']}>
-              {/* Modal Header */}
-              <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
+              {/* Clean Header */}
+              <View style={[styles.cleanModalHeader, { backgroundColor: '#FFFFFF', borderBottomColor: '#e5e7eb' }]}>
             <TouchableOpacity 
                   onPress={() => setShowTitleInput(false)}
-                  style={styles.modalHeaderButton}
+                  style={styles.cleanHeaderButton}
                 >
-                  <X size={scale(20)} color={theme.text} strokeWidth={2} />
+                  <X size={scale(24)} color="#6b7280" strokeWidth={2} />
                 </TouchableOpacity>
                 
-                <View style={styles.modalHeaderCenter}>
-                  <Text style={[styles.modalHeaderTitle, { color: theme.text }]}>
+                <View style={styles.cleanHeaderCenter}>
+                  <Text style={styles.cleanHeaderTitle}>
                     Event Title & Style
                   </Text>
                 </View>
                 
                 <TouchableOpacity 
                   onPress={() => setShowTitleInput(false)}
-                  style={[styles.styleButton, { backgroundColor: theme.primary }]}
+                  style={styles.cleanDoneButton}
                 >
-                  <Text style={styles.styleButtonText}>Done</Text>
+                  <Text style={styles.cleanDoneButtonText}>Done</Text>
                 </TouchableOpacity>
               </View>
 
-              {/* Title Input */}
-              <View style={styles.titleInputContent}>
-                <TextInput
+              {/* Clean Content */}
+              <ScrollView 
+                style={styles.cleanContent}
+                contentContainerStyle={styles.cleanContentContainer}
+                showsVerticalScrollIndicator={false}
+                bounces={true}
+                keyboardShouldPersistTaps="handled"
+                scrollEventThrottle={16}
+                nestedScrollEnabled={true} // Enhanced for color picker interactions
+              >
+                {/* Title Input Card */}
+                <View style={styles.cleanCard}>
+                  <Text style={styles.cleanCardLabel}>
+                    Event Title <Text style={styles.cleanRequiredStar}>*</Text>
+                  </Text>
+                  <TextInput
               style={[
-                    styles.titleInputField,
-                    {
-                      color: eventData.titleStyle.color,
-                      fontSize: moderateScale(Math.min(eventData.titleStyle.fontSize, 24)),
-                      fontFamily: getFontFamily(
-                        eventData.titleStyle.fontFamily, 
-                        eventData.titleStyle.fontWeight, 
-                        eventData.titleStyle.fontStyle
-                      ),
-                      fontWeight: eventData.titleStyle.fontWeight,
-                      textAlign: eventData.titleStyle.textAlign,
-                      fontStyle: eventData.titleStyle.fontStyle,
-                      textDecorationLine: eventData.titleStyle.textDecorationLine,
-                      borderColor: theme.border,
-                    }
-                  ]}
-                  placeholder="Event Title *"
-                  placeholderTextColor={theme.textSecondary}
-                  value={eventData.title}
-                  onChangeText={(title) => setEventData(prev => ({ ...prev, title }))}
-                  maxLength={50}
-                  multiline
-                  autoFocus
-                  keyboardType="default"
-                  returnKeyType="done"
-                  onSubmitEditing={() => setShowTitleInput(false)}
-                />
-                
-                {/* Preview */}
-                <View style={[styles.titlePreview, { backgroundColor: theme.surface }]}>
-                  <Text style={[styles.titlePreviewLabel, { color: theme.textSecondary }]}>
-                    Preview
-                  </Text>
-                  <Text style={[
-                    styles.titlePreviewText,
-                    {
-                      color: eventData.titleStyle.color,
-                      fontSize: moderateScale(Math.min(eventData.titleStyle.fontSize, 20)),
-                      fontFamily: getFontFamily(
-                        eventData.titleStyle.fontFamily, 
-                        eventData.titleStyle.fontWeight, 
-                        eventData.titleStyle.fontStyle
-                      ),
-                      fontWeight: eventData.titleStyle.fontWeight,
-                      textAlign: eventData.titleStyle.textAlign,
-                      fontStyle: eventData.titleStyle.fontStyle,
-                      textDecorationLine: eventData.titleStyle.textDecorationLine,
-                    }
-                  ]} numberOfLines={2}>
-                    {eventData.title || 'Event Title Preview'}
-                  </Text>
+                      styles.cleanInputField,
+                      {
+                        color: eventData.titleStyle.color,
+                        fontSize: moderateScale(Math.min(eventData.titleStyle.fontSize, 18)),
+                        fontFamily: eventData.titleStyle.fontFamily,
+                        fontWeight: eventData.titleStyle.fontWeight,
+                        textAlign: eventData.titleStyle.textAlign,
+                        fontStyle: eventData.titleStyle.fontStyle,
+                        textDecorationLine: eventData.titleStyle.textDecorationLine,
+                        // Dynamic height for larger fonts and script fonts
+                        minHeight: eventData.titleStyle.fontSize > 20 ? verticalScale(60) : verticalScale(44),
+                      }
+                    ]}
+                    placeholder="Event Title"
+                    placeholderTextColor="#9ca3af"
+                    value={eventData.title}
+                    onChangeText={(title) => setEventData(prev => ({ ...prev, title }))}
+                    maxLength={50}
+                    autoFocus
+                    multiline={eventData.titleStyle.fontSize > 16}
+                  />
                 </View>
 
-                {/* Text Styling Controls */}
-                <ScrollView style={styles.stylingContainer} showsVerticalScrollIndicator={false}>
-                  
-                  {/* Quick Format Toggles */}
-                  <View style={[styles.quickFormatSection, { backgroundColor: theme.surface }]}>
-                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                      Quick Format
+                {/* Preview Card */}
+                <View style={styles.cleanCard}>
+                  <Text style={styles.cleanCardTitle}>Preview</Text>
+                  <View style={styles.cleanPreviewBox}>
+                    <Text style={[
+                      styles.cleanPreviewText,
+                      {
+                        color: eventData.titleStyle.color,
+                        fontSize: moderateScale(Math.min(eventData.titleStyle.fontSize, 32)),
+                        fontFamily: eventData.titleStyle.fontFamily,
+                        fontWeight: eventData.titleStyle.fontWeight,
+                        textAlign: eventData.titleStyle.textAlign,
+                        fontStyle: eventData.titleStyle.fontStyle,
+                        textDecorationLine: eventData.titleStyle.textDecorationLine,
+                        lineHeight: moderateScale(Math.min(eventData.titleStyle.fontSize, 32) * 1.3),
+                      }
+                    ]} numberOfLines={eventData.titleStyle.fontSize > 26 ? 2 : 3}>
+                      {eventData.title || 'Event Title Preview'}
                     </Text>
-                    <View style={styles.quickFormatRow}>
-                      <TouchableOpacity
-                        style={[
-                          styles.formatToggle,
-                          {
-                            backgroundColor: eventData.titleStyle.fontWeight === '700' 
-                              ? theme.primary : theme.background,
-                            borderColor: theme.border,
-                          }
-                        ]}
-                        onPress={() => setEventData(prev => ({
-                          ...prev,
-                          titleStyle: {
-                            ...prev.titleStyle,
-                            fontWeight: prev.titleStyle.fontWeight === '700' ? '400' : '700',
-                            fontFamily: prev.titleStyle.fontWeight === '700' ? 'Inter-Regular' : 'Inter-Bold'
-                          }
-                        }))}
-                      >
-                        <Text style={[
-                          styles.formatToggleText,
-                          {
-                            color: eventData.titleStyle.fontWeight === '700' ? '#FFFFFF' : theme.text,
-                            fontWeight: '700'
-                          }
-                        ]}>B</Text>
-                      </TouchableOpacity>
+                  </View>
+                </View>
 
-                      <TouchableOpacity
-                        style={[
-                          styles.formatToggle,
-                          {
-                            backgroundColor: eventData.titleStyle.fontStyle === 'italic' 
-                              ? theme.primary : theme.background,
-                            borderColor: theme.border,
-                          }
-                        ]}
-                        onPress={() => setEventData(prev => ({
-                          ...prev,
-                          titleStyle: {
-                            ...prev.titleStyle,
-                            fontStyle: prev.titleStyle.fontStyle === 'italic' ? 'normal' : 'italic',
-                            fontFamily: prev.titleStyle.fontStyle === 'italic' 
-                              ? prev.titleStyle.fontFamily.replace('Italic', '').replace('Italic', '') || 'Inter-Regular'
-                              : getFontFamily(prev.titleStyle.fontFamily, prev.titleStyle.fontWeight, 'italic')
-                          }
-                        }))}
-                      >
-                        <Text style={[
-                          styles.formatToggleText,
-                          {
-                            color: eventData.titleStyle.fontStyle === 'italic' ? '#FFFFFF' : theme.text,
-                            fontStyle: 'italic'
-                          }
-                        ]}>I</Text>
-                      </TouchableOpacity>
+                {/* Style Controls Card */}
+                <View style={styles.cleanCard}>
+                  {/* Grid Layout for Format Controls */}
+                  <View style={styles.cleanGridRow}>
+                    {/* Quick Format Column */}
+                    <View style={styles.cleanGridColumn}>
+                      <Text style={styles.cleanControlLabel}>Quick Format</Text>
+                      <View style={styles.cleanFormatButtons}>
+                        <TouchableOpacity
+                          style={[
+                            styles.cleanIconButton,
+                            eventData.titleStyle.fontStyle === 'italic' && styles.cleanIconButtonActive
+                          ]}
+                          onPress={() => setEventData(prev => ({
+                            ...prev,
+                            titleStyle: {
+                              ...prev.titleStyle,
+                              fontStyle: prev.titleStyle.fontStyle === 'italic' ? 'normal' : 'italic'
+                            }
+                          }))}
+                        >
+                          <Text style={[
+                            styles.cleanIconButtonText,
+                            eventData.titleStyle.fontStyle === 'italic' && styles.cleanIconButtonTextActive,
+                            { fontStyle: 'italic' }
+                          ]}>I</Text>
+                        </TouchableOpacity>
 
-                      <TouchableOpacity
-                        style={[
-                          styles.formatToggle,
-                          {
-                            backgroundColor: eventData.titleStyle.textDecorationLine.includes('underline') 
-                              ? theme.primary : theme.background,
-                            borderColor: theme.border,
-                          }
-                        ]}
-                        onPress={() => setEventData(prev => ({
-                          ...prev,
-                          titleStyle: {
-                            ...prev.titleStyle,
-                            textDecorationLine: prev.titleStyle.textDecorationLine.includes('underline') ? 'none' : 'underline'
-                          }
-                        }))}
-                      >
-                        <Text style={[
-                          styles.formatToggleText,
-                          {
-                            color: eventData.titleStyle.textDecorationLine.includes('underline') ? '#FFFFFF' : theme.text,
-                            textDecorationLine: 'underline'
-                          }
-                        ]}>U</Text>
-                      </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.cleanIconButton,
+                            eventData.titleStyle.textDecorationLine.includes('underline') && styles.cleanIconButtonActive
+                          ]}
+                          onPress={() => setEventData(prev => ({
+                            ...prev,
+                            titleStyle: {
+                              ...prev.titleStyle,
+                              textDecorationLine: prev.titleStyle.textDecorationLine.includes('underline') ? 'none' : 'underline'
+                            }
+                          }))}
+                        >
+                          <Text style={[
+                            styles.cleanIconButtonText,
+                            eventData.titleStyle.textDecorationLine.includes('underline') && styles.cleanIconButtonTextActive,
+                            { textDecorationLine: 'underline' }
+                          ]}>U</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    {/* Text Alignment Column */}
+                    <View style={styles.cleanGridColumn}>
+                      <Text style={styles.cleanControlLabel}>Text Alignment</Text>
+                      <View style={styles.cleanAlignmentButtons}>
+                        {[
+                          { align: 'left' as const, icon: AlignLeft },
+                          { align: 'center' as const, icon: AlignCenter },
+                          { align: 'right' as const, icon: AlignRight }
+                        ].map(({ align, icon: IconComponent }) => (
+                          <TouchableOpacity
+                            key={align}
+                            style={[
+                              styles.cleanAlignButton,
+                              eventData.titleStyle.textAlign === align && styles.cleanAlignButtonActive
+                            ]}
+                            onPress={() => setEventData(prev => ({
+                              ...prev,
+                              titleStyle: {
+                                ...prev.titleStyle,
+                                textAlign: align
+                              }
+                            }))}
+                          >
+                            <IconComponent 
+                  size={getResponsiveSize(16, 18, 20, 22, 24)} 
+                              color={eventData.titleStyle.textAlign === align ? '#FFFFFF' : '#6B7280'} 
+                  strokeWidth={2}
+                />
+                          </TouchableOpacity>
+                        ))}
+                      </View>
                     </View>
                   </View>
 
-                  {/* Font Family */}
-                  <View style={[styles.fontFamilySection, { backgroundColor: theme.surface }]}>
-                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                      Font Family
-                </Text>
-                    <TouchableOpacity
-                      style={[styles.fontFamilyDropdown, { backgroundColor: theme.background, borderColor: theme.border }]}
-                      onPress={() => setShowTextStylePicker(true)}
-                    >
-                      <View style={styles.fontFamilyContent}>
-                        <View style={[styles.fontFamilyPreview, { backgroundColor: `${theme.primary}20` }]}>
-                          <Text style={[
-                            styles.fontFamilyPreviewText,
-                            {
-                              color: theme.primary,
-                              fontFamily: eventData.titleStyle.fontFamily,
-                              fontWeight: eventData.titleStyle.fontWeight
-                            }
-                          ]}>
-                            Aa
-                          </Text>
-                        </View>
-                        <View style={styles.fontFamilyInfo}>
-                          <Text style={[styles.fontFamilyName, { color: theme.text }]}>
+                  {/* Font Controls Grid */}
+                  <View style={styles.cleanGridRowSpaced}>
+                    {/* Font Family Column */}
+                    <View style={styles.cleanGridColumn}>
+                      <Text style={styles.cleanControlLabel}>Font Family</Text>
+                      <View>
+                        <TouchableOpacity
+                          style={styles.cleanDropdownSelect}
+                          onPress={() => {
+                            setShowFontWeightDropdown(false);
+                            setShowFontFamilyDropdown(!showFontFamilyDropdown);
+                          }}
+                        >
+                          <Text style={styles.cleanDropdownText}>
                             {getFontDisplayName(eventData.titleStyle.fontFamily)}
+                </Text>
+                          <ChevronDown 
+                            size={getResponsiveSize(14, 16, 18, 20, 22)} 
+                            color="#6B7280" 
+                            strokeWidth={2}
+                            style={{
+                              transform: [{ rotate: showFontFamilyDropdown ? '180deg' : '0deg' }]
+                            }}
+                          />
+            </TouchableOpacity>
+                        
+                        {/* Font Family Dropdown */}
+                        {showFontFamilyDropdown && (
+                          <View style={styles.cleanInlineDropdown}>
+                            <ScrollView style={styles.cleanDropdownScroll} showsVerticalScrollIndicator={false}>
+                              {/* Sans-serif Fonts */}
+                              <View style={styles.cleanFontCategory}>
+                                <Text style={styles.cleanFontCategoryLabel}>Sans-serif</Text>
+                                {[
+                                  { 
+                                    family: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+                                    label: 'System',
+                                    fallback: 'sans-serif'
+                                  },
+                                  { 
+                                    family: Platform.OS === 'ios' ? 'Arial' : 'sans-serif',
+                                    label: 'Arial',
+                                    fallback: 'sans-serif'
+                                  },
+                                  { 
+                                    family: Platform.OS === 'ios' ? 'Helvetica' : 'sans-serif',
+                                    label: 'Helvetica',
+                                    fallback: 'sans-serif'
+                                  },
+                                  { 
+                                    family: Platform.OS === 'ios' ? 'Verdana' : 'sans-serif',
+                                    label: 'Verdana',
+                                    fallback: 'sans-serif'
+                                  },
+                                  { 
+                                    family: Platform.OS === 'ios' ? 'Trebuchet MS' : 'sans-serif',
+                                    label: 'Trebuchet MS',
+                                    fallback: 'sans-serif'
+                                  }
+                                ].map(({ family, label, fallback }) => (
+                                  <TouchableOpacity
+                                    key={label}
+                                    style={[
+                                      styles.cleanDropdownOption,
+                                      eventData.titleStyle.fontFamily === family && styles.cleanDropdownOptionActive
+                                    ]}
+                                    onPress={() => handleFontFamilyChange(family)}
+                                  >
+                                    <Text style={[
+                                      styles.cleanDropdownOptionText,
+                                      { fontFamily: family },
+                                      eventData.titleStyle.fontFamily === family && styles.cleanDropdownOptionTextActive
+                                    ]}>
+                                      {label}
+                                    </Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+
+                              {/* Serif Fonts */}
+                              <View style={styles.cleanFontCategory}>
+                                <Text style={styles.cleanFontCategoryLabel}>Serif</Text>
+                                {[
+                                  { 
+                                    family: Platform.OS === 'ios' ? 'Times New Roman' : 'serif',
+                                    label: 'Times New Roman',
+                                    fallback: 'serif'
+                                  },
+                                  { 
+                                    family: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+                                    label: 'Georgia',
+                                    fallback: 'serif'
+                                  },
+                                  { 
+                                    family: Platform.OS === 'ios' ? 'Palatino' : 'serif',
+                                    label: 'Palatino',
+                                    fallback: 'serif'
+                                  }
+                                ].map(({ family, label, fallback }) => (
+                                  <TouchableOpacity
+                                    key={label}
+                                    style={[
+                                      styles.cleanDropdownOption,
+                                      eventData.titleStyle.fontFamily === family && styles.cleanDropdownOptionActive
+                                    ]}
+                                    onPress={() => handleFontFamilyChange(family)}
+                                  >
+                                    <Text style={[
+                                      styles.cleanDropdownOptionText,
+                                      { fontFamily: family },
+                                      eventData.titleStyle.fontFamily === family && styles.cleanDropdownOptionTextActive
+                                    ]}>
+                                      {label}
+                                    </Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+
+                              {/* Monospace Fonts */}
+                              <View style={styles.cleanFontCategory}>
+                                <Text style={styles.cleanFontCategoryLabel}>Monospace</Text>
+                                {[
+                                  { 
+                                    family: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                                    label: 'Courier',
+                                    fallback: 'monospace'
+                                  },
+                                  { 
+                                    family: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+                                    label: 'Courier New',
+                                    fallback: 'monospace'
+                                  },
+                                  { 
+                                    family: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+                                    label: 'Menlo',
+                                    fallback: 'monospace'
+                                  }
+                                ].map(({ family, label, fallback }) => (
+                                  <TouchableOpacity
+                                    key={label}
+                                    style={[
+                                      styles.cleanDropdownOption,
+                                      eventData.titleStyle.fontFamily === family && styles.cleanDropdownOptionActive
+                                    ]}
+                                    onPress={() => handleFontFamilyChange(family)}
+                                  >
+                                    <Text style={[
+                                      styles.cleanDropdownOptionText,
+                                      { fontFamily: family },
+                                      eventData.titleStyle.fontFamily === family && styles.cleanDropdownOptionTextActive
+                                    ]}>
+                                      {label}
+                                    </Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+
+                              {/* Display Fonts */}
+                              <View style={styles.cleanFontCategory}>
+                                <Text style={styles.cleanFontCategoryLabel}>Display</Text>
+                                {[
+                                  { 
+                                    family: Platform.OS === 'ios' ? 'Impact' : 'sans-serif',
+                                    label: 'Impact',
+                                    fallback: 'sans-serif'
+                                  },
+                                  { 
+                                    family: Platform.OS === 'ios' ? 'American Typewriter' : 'serif',
+                                    label: 'American Typewriter',
+                                    fallback: 'serif'
+                                  },
+                                  { 
+                                    family: Platform.OS === 'ios' ? 'Copperplate' : 'fantasy',
+                                    label: 'Copperplate',
+                                    fallback: 'fantasy'
+                                  }
+                                ].map(({ family, label, fallback }) => (
+                                  <TouchableOpacity
+                                    key={label}
+                                    style={[
+                                      styles.cleanDropdownOption,
+                                      eventData.titleStyle.fontFamily === family && styles.cleanDropdownOptionActive
+                                    ]}
+                                    onPress={() => handleFontFamilyChange(family)}
+                                  >
+                                    <Text style={[
+                                      styles.cleanDropdownOptionText,
+                                      { fontFamily: family },
+                                      eventData.titleStyle.fontFamily === family && styles.cleanDropdownOptionTextActive
+                                    ]}>
+                                      {label}
+                                    </Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+
+                              {/* Handwriting Fonts */}
+                              <View style={styles.cleanFontCategory}>
+                                <Text style={styles.cleanFontCategoryLabel}>Handwriting</Text>
+                                {[
+                                  { 
+                                    family: Platform.OS === 'ios' ? 'Snell Roundhand' : 'cursive',
+                                    label: 'Snell Roundhand',
+                                    fallback: 'cursive'
+                                  },
+                                  { 
+                                    family: Platform.OS === 'ios' ? 'Marker Felt' : 'fantasy',
+                                    label: 'Marker Felt',
+                                    fallback: 'fantasy'
+                                  }
+                                ].map(({ family, label, fallback }) => (
+                                  <TouchableOpacity
+                                    key={label}
+                                    style={[
+                                      styles.cleanDropdownOption,
+                                      eventData.titleStyle.fontFamily === family && styles.cleanDropdownOptionActive
+                                    ]}
+                                    onPress={() => handleFontFamilyChange(family)}
+                                  >
+                                    <Text style={[
+                                      styles.cleanDropdownOptionText,
+                                      { fontFamily: family },
+                                      eventData.titleStyle.fontFamily === family && styles.cleanDropdownOptionTextActive
+                                    ]}>
+                                      {label}
+                                    </Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            </ScrollView>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+
+                    {/* Font Weight Column */}
+                    <View style={styles.cleanGridColumn}>
+                      <Text style={styles.cleanControlLabel}>Font Weight</Text>
+                      <View>
+                                                <TouchableOpacity
+                          style={styles.cleanDropdownSelect}
+                          onPress={() => {
+                            setShowFontFamilyDropdown(false);
+                            setShowFontWeightDropdown(!showFontWeightDropdown);
+                          }}
+                        >
+                          <Text style={styles.cleanDropdownText}>
+                            {getWeightLabel(eventData.titleStyle.fontFamily, eventData.titleStyle.fontWeight)}
                           </Text>
-                          <Text style={[styles.fontFamilyDescription, { color: theme.textSecondary }]}>
-                            Select from 17 professional fonts
+                          <ChevronDown 
+                            size={getResponsiveSize(14, 16, 18, 20, 22)} 
+                            color="#6B7280" 
+                            strokeWidth={2}
+                            style={{
+                              transform: [{ rotate: showFontWeightDropdown ? '180deg' : '0deg' }]
+                            }}
+                          />
+                        </TouchableOpacity>
+                        
+                        {/* Font Weight Dropdown */}
+                        {showFontWeightDropdown && (
+                          <View style={styles.cleanInlineDropdown}>
+                            {getFontWeightOptions(eventData.titleStyle.fontFamily).map(({ weight, label }) => (
+                              <TouchableOpacity
+                                key={weight}
+                                style={[
+                                  styles.cleanDropdownOption,
+                                  eventData.titleStyle.fontWeight === weight && styles.cleanDropdownOptionActive
+                                ]}
+                                onPress={() => handleFontWeightChange(weight as '300' | '400' | '500' | '600' | '700' | '800' | '900')}
+                              >
+                                <Text style={[
+                                  styles.cleanDropdownOptionText,
+                                  eventData.titleStyle.fontWeight === weight && styles.cleanDropdownOptionTextActive,
+                                  { fontFamily: eventData.titleStyle.fontFamily, fontWeight: weight as any }
+                                ]}>
+                                  {label}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        )}
+                      </View>
+                    </View>
+
+                    {/* Font Size Column - Full Width */}
+                    <View style={styles.cleanFontSizeColumn}>
+                      <Text style={styles.cleanControlLabelCenter}>Font Size</Text>
+                      <View style={styles.cleanNumberInput}>
+                        <TouchableOpacity
+                          style={[
+                            styles.cleanNumberButton,
+                            styles.cleanNumberButtonLeft,
+                            eventData.titleStyle.fontSize <= 8 && styles.cleanNumberButtonDisabled
+                          ]}
+                          onPress={() => setEventData(prev => ({
+                            ...prev,
+                            titleStyle: {
+                              ...prev.titleStyle,
+                              fontSize: Math.max(8, prev.titleStyle.fontSize - 1)
+                            }
+                          }))}
+                          disabled={eventData.titleStyle.fontSize <= 8}
+                        >
+                          <Text style={[
+                            styles.cleanNumberButtonText,
+                            eventData.titleStyle.fontSize <= 8 && styles.cleanNumberButtonTextDisabled
+                          ]}>−</Text>
+                        </TouchableOpacity>
+
+                        <View style={styles.cleanNumberDisplay}>
+                          <Text style={styles.cleanNumberDisplayText}>
+                            {eventData.titleStyle.fontSize}
                           </Text>
                         </View>
-                      </View>
-                      <Text style={[styles.fontFamilyArrow, { color: theme.textSecondary }]}>▶</Text>
-            </TouchableOpacity>
-                  </View>
 
-                  {/* Text Alignment */}
-                  <View style={[styles.alignmentSection, { backgroundColor: theme.surface }]}>
-                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                      Text Alignment
-                    </Text>
-                    <View style={styles.alignmentRow}>
-                      {(['left', 'center', 'right'] as const).map((alignment) => (
                         <TouchableOpacity
-                          key={alignment}
                           style={[
-                            styles.alignmentButton,
-                            {
-                              backgroundColor: eventData.titleStyle.textAlign === alignment 
-                                ? theme.primary : theme.background,
-                              borderColor: theme.border,
-                            }
+                            styles.cleanNumberButton,
+                            styles.cleanNumberButtonRight,
+                            eventData.titleStyle.fontSize >= 32 && styles.cleanNumberButtonDisabled
                           ]}
                           onPress={() => setEventData(prev => ({
                             ...prev,
                             titleStyle: {
                               ...prev.titleStyle,
-                              textAlign: alignment
+                              fontSize: Math.min(32, prev.titleStyle.fontSize + 1)
                             }
                           }))}
+                          disabled={eventData.titleStyle.fontSize >= 32}
                         >
                           <Text style={[
-                            styles.alignmentButtonText,
-                            {
-                              color: eventData.titleStyle.textAlign === alignment ? '#FFFFFF' : theme.text,
-                              textAlign: alignment
-                            }
-                          ]}>
-                            {alignment === 'left' ? '⟸' : alignment === 'center' ? '⟷' : '⟹'}
-                          </Text>
+                            styles.cleanNumberButtonText,
+                            eventData.titleStyle.fontSize >= 32 && styles.cleanNumberButtonTextDisabled
+                          ]}>+</Text>
                         </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-
-                  {/* Font Size */}
-                  <View style={[styles.fontSizeSection, { backgroundColor: theme.surface }]}>
-                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                      Font Size
-                    </Text>
-                    <View style={styles.fontSizeController}>
-                      <TouchableOpacity
-                        style={[styles.fontSizeArrow, { backgroundColor: theme.background, borderColor: theme.border }]}
-                        onPress={() => setEventData(prev => ({
-                          ...prev,
-                          titleStyle: {
-                            ...prev.titleStyle,
-                            fontSize: Math.max(8, prev.titleStyle.fontSize - 1)
-                          }
-                        }))}
-                        disabled={eventData.titleStyle.fontSize <= 8}
-                      >
-                        <Text style={[styles.fontSizeArrowText, { 
-                          color: eventData.titleStyle.fontSize <= 8 ? theme.textSecondary : theme.text 
-                        }]}>−</Text>
-                      </TouchableOpacity>
-                      
-                      <View style={[styles.fontSizeDisplay, { backgroundColor: theme.background, borderColor: theme.border }]}>
-                        <Text style={[styles.fontSizeDisplayText, { color: theme.text }]}>
-                          {eventData.titleStyle.fontSize}
-                        </Text>
                       </View>
-                      
-                      <TouchableOpacity
-                        style={[styles.fontSizeArrow, { backgroundColor: theme.background, borderColor: theme.border }]}
-                        onPress={() => setEventData(prev => ({
-                          ...prev,
-                          titleStyle: {
-                            ...prev.titleStyle,
-                            fontSize: Math.min(25, prev.titleStyle.fontSize + 1)
-                          }
-                        }))}
-                        disabled={eventData.titleStyle.fontSize >= 25}
-                      >
-                        <Text style={[styles.fontSizeArrowText, { 
-                          color: eventData.titleStyle.fontSize >= 25 ? theme.textSecondary : theme.text 
-                        }]}>+</Text>
-                      </TouchableOpacity>
-                    </View>
-                    <Text style={[styles.fontSizeHelper, { color: theme.textSecondary }]}>
-                      Display is optimized for readability
-                    </Text>
-                  </View>
-
-                  {/* Font Weight */}
-                  <View style={[styles.fontWeightSection, { backgroundColor: theme.surface }]}>
-                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                      Font Weight
-                    </Text>
-                    <View style={styles.fontWeightOptions}>
-                      {[
-                        { weight: '400', label: 'Regular', family: 'Inter-Regular' },
-                        { weight: '500', label: 'Medium', family: 'Inter-Medium' },
-                        { weight: '600', label: 'SemiBold', family: 'Inter-SemiBold' },
-                        { weight: '700', label: 'Bold', family: 'Inter-Bold' },
-                        { weight: '800', label: 'ExtraBold', family: 'Inter-ExtraBold' }
-                      ].map(({ weight, label, family }) => (
-                        <TouchableOpacity
-                          key={weight}
-                          style={[
-                            styles.fontWeightOption,
-                            {
-                              backgroundColor: eventData.titleStyle.fontWeight === weight 
-                                ? theme.primary : theme.background,
-                              borderColor: theme.border,
-                            }
-                          ]}
-                          onPress={() => setEventData(prev => ({
-                            ...prev,
-                            titleStyle: {
-                              ...prev.titleStyle,
-                              fontWeight: weight as '400' | '500' | '600' | '700' | '800',
-                              fontFamily: family
-                            }
-                          }))}
-                        >
-                          <Text style={[
-                            styles.fontWeightOptionText,
-                            {
-                              color: eventData.titleStyle.fontWeight === weight ? '#FFFFFF' : theme.text,
-                              fontFamily: family
-                            }
-                          ]}>
-                            {label}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
                     </View>
                   </View>
 
-                  {/* Advanced Color Picker */}
-                  <View style={[styles.colorSection, { backgroundColor: theme.surface }]}>
-                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                      Text Color
-                    </Text>
-                    
-                    <View style={styles.colorPickerContainer}>
+                  {/* Color Section */}
+                  <View style={styles.cleanCard}>
+                    <Text style={styles.cleanControlLabel}>Color</Text>
+                    <View style={styles.cleanColorPickerContainer}>
                       <ColorPicker
                         initialColor={eventData.titleStyle.color}
                         onColorChange={(color) => setEventData(prev => ({
@@ -1119,13 +1459,12 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
                             color: color
                           }
                         }))}
-                        style={styles.colorPickerStyle}
+                        style={styles.cleanColorPickerStyle}
                       />
                     </View>
                   </View>
-
-                </ScrollView>
-              </View>
+                </View>
+              </ScrollView>
         </SafeAreaView>
           </View>
         </Modal>
@@ -1197,19 +1536,15 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
                 );
               }
             } else {
-              // Default gradient background
+              // Default background image - match CreateEventScreen
               return (
-                <LinearGradient
-                  colors={isDark 
-                    ? ['#1a1a2e', '#16213e', '#0f3460']
-                    : ['#667eea', '#764ba2', '#f093fb']
-                  }
+                <ImageBackground
+                  source={require('@/assets/images/invites/default.png')}
                   style={styles.previewBackground}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
+                  resizeMode="cover"
                 >
                   {renderPreviewContent()}
-                </LinearGradient>
+                </ImageBackground>
               );
                         }
           })()}
@@ -1419,6 +1754,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: getResponsiveSize(100, 110, 120, 130, 140),
+  },
+  titleTextContainer: {
+    overflow: 'hidden',
+    paddingVertical: getResponsiveSpacing(4),
+    width: '100%',
   },
   titleText: {
     fontSize: getResponsiveSize(24, 26, 28, 30, 32),
@@ -1745,31 +2085,49 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: getResponsiveSpacing(16),
+    paddingHorizontal: getResponsiveSpacing(16),
+    paddingTop: getResponsiveSpacing(16),
+    paddingBottom: getResponsiveSpacing(8),
+    marginTop: Platform.OS === 'ios' ? getResponsiveSpacing(8) : getResponsiveSpacing(16),
   },
   previewBackButton: {
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    padding: getResponsiveSpacing(12),
+    width: getResponsiveSize(44, 48, 52, 56, 60),
+    height: getResponsiveSize(44, 48, 52, 56, 60),
     borderRadius: getResponsiveSize(22, 24, 26, 28, 30),
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+    overflow: 'hidden',
   },
   previewNextButton: {
-    backgroundColor: 'white',
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: getResponsiveSpacing(10),
-    paddingHorizontal: getResponsiveSpacing(24),
+    paddingHorizontal: getResponsiveSpacing(20),
     borderRadius: getResponsiveSize(22, 24, 26, 28, 30),
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    position: 'relative',
+    overflow: 'hidden',
+    minHeight: getResponsiveSize(44, 48, 52, 56, 60),
+    justifyContent: 'center',
+  },
+  previewButtonBlur: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: getResponsiveSize(22, 24, 26, 28, 30),
+  },
+  previewNextButtonBlur: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: getResponsiveSize(22, 24, 26, 28, 30),
   },
   previewNextButtonText: {
-    color: '#333',
+    color: '#FFFFFF',
     fontWeight: '600',
     fontSize: getResponsiveSize(13, 14, 15, 16, 17),
     fontFamily: 'Inter-SemiBold',
@@ -1781,6 +2139,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSpacing(24),
     paddingTop: getResponsiveSpacing(16),
     paddingBottom: getResponsiveSpacing(8),
+  },
+  previewTitleContainer: {
+    overflow: 'hidden',
+    paddingVertical: getResponsiveSpacing(8),
+    width: '100%',
   },
   previewTitle: {
     fontSize: getResponsiveSize(36, 40, 44, 48, 52),
@@ -1930,5 +2293,421 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveSize(12, 13, 14, 15, 16),
     fontWeight: '500',
     paddingLeft: getResponsiveSpacing(8),
+  },
+
+  // Clean Modal Styles
+  cleanModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(12),
+    borderBottomWidth: 1,
+    position: 'sticky',
+    top: 0,
+    zIndex: 50,
+  },
+  cleanHeaderButton: {
+    padding: scale(8),
+    borderRadius: scale(8),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cleanHeaderCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  cleanHeaderTitle: {
+    fontSize: moderateScale(18),
+    fontWeight: '600',
+    color: '#1f2937',
+    fontFamily: 'Inter-SemiBold',
+  },
+  cleanDoneButton: {
+    backgroundColor: '#8b5cf6',
+    paddingHorizontal: scale(20),
+    paddingVertical: verticalScale(8),
+    borderRadius: scale(8),
+    minWidth: scale(60),
+    alignItems: 'center',
+  },
+  cleanDoneButtonText: {
+    color: '#FFFFFF',
+    fontSize: moderateScale(16),
+    fontWeight: '500',
+    fontFamily: 'Inter-Medium',
+  },
+
+  // Clean Content
+  cleanContent: {
+    flex: 1,
+    backgroundColor: '#f3f4f6',
+  },
+  cleanContentContainer: {
+    paddingHorizontal: scale(16),
+    paddingTop: verticalScale(24),
+    paddingBottom: verticalScale(180), // Enhanced for color picker + hue slider visibility
+    gap: verticalScale(24),
+    flexGrow: 1,
+  },
+
+  // Clean Cards
+  cleanCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: scale(12),
+    padding: scale(16),
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  cleanCardLabel: {
+    fontSize: moderateScale(14),
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: verticalScale(4),
+    fontFamily: 'Inter-Medium',
+  },
+  cleanRequiredStar: {
+    color: '#ef4444',
+  },
+  cleanCardTitle: {
+    fontSize: moderateScale(14),
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: verticalScale(8),
+    fontFamily: 'Inter-Medium',
+  },
+
+  // Clean Input Field
+  cleanInputField: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: scale(8),
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(12),
+    fontSize: moderateScale(14),
+    fontFamily: 'Inter-Regular',
+    backgroundColor: '#FFFFFF',
+    minHeight: verticalScale(44),
+    // Fix for script/decorative fonts that extend beyond bounds
+    overflow: 'hidden',
+    textAlignVertical: Platform.OS === 'android' ? 'center' : 'auto',
+    // Additional padding for script fonts like Zapfino
+    paddingTop: verticalScale(16),
+    paddingBottom: verticalScale(16),
+  },
+
+  // Clean Preview
+  cleanPreviewBox: {
+    paddingVertical: verticalScale(20),
+    paddingHorizontal: scale(16),
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: scale(8),
+    backgroundColor: '#f9fafb',
+    minHeight: verticalScale(80),
+    justifyContent: 'center',
+    // Better overflow handling for script fonts
+    overflow: 'hidden',
+  },
+  cleanPreviewText: {
+    fontSize: moderateScale(24),
+    fontWeight: '700',
+    fontFamily: 'Inter-Bold',
+    lineHeight: moderateScale(32),
+  },
+
+  // Clean Grid Layout
+  cleanGridRow: {
+    flexDirection: 'row',
+    gap: scale(16),
+    marginBottom: verticalScale(16),
+  },
+  cleanGridRowSpaced: {
+    flexDirection: 'row',
+    gap: scale(16),
+    marginBottom: verticalScale(16),
+    flexWrap: 'wrap',
+  },
+  cleanGridColumn: {
+    flex: 1,
+    minWidth: scale(140),
+  },
+  cleanControlLabel: {
+    fontSize: moderateScale(14),
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: verticalScale(4),
+    fontFamily: 'Inter-Medium',
+  },
+  cleanControlLabelCenter: {
+    fontSize: moderateScale(14),
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: verticalScale(4),
+    textAlign: 'center',
+    fontFamily: 'Inter-Medium',
+  },
+
+  // Clean Format Buttons
+  cleanFormatButtons: {
+    flexDirection: 'row',
+    gap: scale(8),
+  },
+  cleanIconButton: {
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(6),
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cleanIconButtonActive: {
+    backgroundColor: '#8b5cf6',
+    borderColor: '#8b5cf6',
+  },
+  cleanIconButtonText: {
+    fontSize: moderateScale(16),
+    fontWeight: '600',
+    color: '#4b5563',
+  },
+  cleanIconButtonTextActive: {
+    color: '#FFFFFF',
+  },
+
+  // Clean Alignment Buttons
+  cleanAlignmentButtons: {
+    flexDirection: 'row',
+    gap: scale(4),
+  },
+  cleanAlignButton: {
+    flex: 1,
+    height: scale(32),
+    borderRadius: scale(6),
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cleanAlignButtonActive: {
+    backgroundColor: '#8b5cf6',
+    borderColor: '#8b5cf6',
+  },
+  cleanAlignButtonText: {
+    fontSize: moderateScale(16),
+    fontWeight: '600',
+    color: '#4b5563',
+  },
+  cleanAlignButtonTextActive: {
+    color: '#FFFFFF',
+  },
+
+  // Clean Dropdown
+  cleanDropdownSelect: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: scale(8),
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(12),
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: verticalScale(44),
+  },
+  cleanDropdownText: {
+    fontSize: moderateScale(14),
+    color: '#374151',
+    fontFamily: 'Inter-Regular',
+    flex: 1,
+  },
+  cleanDropdownArrow: {
+    fontSize: moderateScale(12),
+    color: '#6b7280',
+    marginLeft: scale(8),
+  },
+
+  // Clean Font Weight Selector
+  cleanWeightSelector: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: scale(8),
+    marginTop: verticalScale(4),
+    maxHeight: verticalScale(200),
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cleanWeightOption: {
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(12),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#e5e7eb',
+  },
+  cleanWeightOptionActive: {
+    backgroundColor: '#f3f4f6',
+  },
+  cleanWeightOptionText: {
+    fontSize: moderateScale(14),
+    color: '#374151',
+    fontFamily: 'Inter-Regular',
+  },
+  cleanWeightOptionTextActive: {
+    color: '#8b5cf6',
+    fontWeight: '500',
+  },
+
+  // Clean Font Size Column
+  cleanFontSizeColumn: {
+    flex: 1,
+    minWidth: scale(120),
+    alignItems: 'center',
+  },
+
+  // Clean Number Input
+  cleanNumberInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cleanNumberButton: {
+    width: scale(32),
+    height: scale(40),
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    backgroundColor: '#f9fafb',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cleanNumberButtonLeft: {
+    borderTopLeftRadius: scale(6),
+    borderBottomLeftRadius: scale(6),
+    borderRightWidth: 0,
+  },
+  cleanNumberButtonRight: {
+    borderTopRightRadius: scale(6),
+    borderBottomRightRadius: scale(6),
+    borderLeftWidth: 0,
+  },
+  cleanNumberButtonDisabled: {
+    backgroundColor: '#f3f4f6',
+    opacity: 0.5,
+  },
+  cleanNumberButtonText: {
+    fontSize: moderateScale(16),
+    fontWeight: '600',
+    color: '#4b5563',
+  },
+  cleanNumberButtonTextDisabled: {
+    color: '#9ca3af',
+  },
+  cleanNumberDisplay: {
+    minWidth: scale(64),
+    height: scale(40),
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flex: 1,
+  },
+  cleanNumberDisplayText: {
+    fontSize: moderateScale(14),
+    fontWeight: '600',
+    color: '#374151',
+    textAlign: 'center',
+    fontFamily: 'Inter-SemiBold',
+  },
+
+  // Clean Color Section
+  cleanColorSection: {
+    // Remove marginTop and marginBottom since cleanCard handles spacing
+  },
+  cleanColorPickerContainer: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: verticalScale(180), // Increased to accommodate both color picker and hue slider
+  },
+  cleanColorPickerStyle: {
+    width: '100%',
+    maxWidth: scale(300),
+    minHeight: verticalScale(160), // Ensures full ColorPicker component is visible
+  },
+
+  // Clean Inline Dropdown
+  cleanInlineDropdown: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: scale(8),
+    marginTop: verticalScale(4),
+    maxHeight: verticalScale(180),
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  cleanDropdownOption: {
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(10),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#e5e7eb',
+  },
+  cleanDropdownOptionActive: {
+    backgroundColor: '#f3f4f6',
+  },
+  cleanDropdownOptionText: {
+    fontSize: moderateScale(14),
+    color: '#374151',
+    fontFamily: 'Inter-Regular',
+  },
+  cleanDropdownOptionTextActive: {
+    color: '#8b5cf6',
+    fontWeight: '500',
+  },
+
+  // Font Category Styles
+  cleanDropdownScroll: {
+    maxHeight: verticalScale(180),
+  },
+  cleanFontCategory: {
+    paddingVertical: verticalScale(4),
+  },
+  cleanFontCategoryLabel: {
+    fontSize: moderateScale(12),
+    fontWeight: '600',
+    color: '#6b7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(8),
+    backgroundColor: '#f9fafb',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#e5e7eb',
+    fontFamily: 'Inter-SemiBold',
   },
 }); 

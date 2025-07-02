@@ -58,6 +58,17 @@ const backgroundImages = {
   winterSnowyForest: require('@/assets/images/invites/Winter Snowy Forest Magic in the Air Quote Phone Wallpaper.png'),
   yellowGreenNature: require('@/assets/images/invites/Yellow and Green Watercolor Illustration Nature View Phone Wallpaper.png'),
   yellowWhiteGreenFlower: require('@/assets/images/invites/Yellow White and Green Aesthetic Flower Wallpaper Phone .png'),
+  tealIndianElephant: require('@/assets/images/invites/Teal Colorful Illustrative Indian Elephant Phone Wallpaper.png'),
+  blueArtsyBaby: require('@/assets/images/invites/Blue Artsy Baby Announcement Phone Wallpaper.png'),
+  pinkArtsyBaby: require('@/assets/images/invites/Pink Artsy Baby Announcement Phone Wallpaper.png'),
+  purpleFloralDiwali: require('@/assets/images/invites/Purple Illustrated Floral Diwali Phone Wallpaper.png'),
+  loveHeartBalloons: require('@/assets/images/invites/Love Heart Balloons  watercolor phone wallpaper.png'),
+  fondoAzulCumple: require('@/assets/images/invites/FondoDePantallaMovilInvitacionCumpleanosSimpleAzul.png'),
+  greenYellowBlueRetro: require('@/assets/images/invites/Green Yellow and Blue Retro Cartoon Party Phone Wallpaper.png'),
+  blueOrangeGreenCelebration: require('@/assets/images/invites/Blue Orange and Green Playful Celebration Phone Wallpaper.png'),
+  birthdayInvitation1: require('@/assets/images/invites/Birthday Invitation (Phone Wallpaper).png'),
+  birthdayInvitation2: require('@/assets/images/invites/Birthday Invitation (Phone Wallpaper another.png'),
+  happyBirthday: require('@/assets/images/invites/Happy Birthday (Phone Wallpaper).png'),
 };
 
 // Enhanced responsive scaling with better device detection
@@ -195,6 +206,72 @@ const backgroundOptions: BackgroundOption[] = [
     id: 'silkyGlowingBubble',
     name: 'Glowing Bubble',
     imageSource: backgroundImages.silkyGlowingBubble,
+    category: 'vibrant'
+  },
+  {
+    id: 'tealIndianElephant',
+    name: 'Teal Indian Elephant',
+    imageSource: backgroundImages.tealIndianElephant,
+    category: 'vibrant'
+  },
+  {
+    id: 'blueArtsyBaby',
+    name: 'Blue Artsy Baby',
+    imageSource: backgroundImages.blueArtsyBaby,
+    category: 'vibrant'
+  },
+  {
+    id: 'pinkArtsyBaby',
+    name: 'Pink Artsy Baby',
+    imageSource: backgroundImages.pinkArtsyBaby,
+    category: 'vibrant'
+  },
+  {
+    id: 'purpleFloralDiwali',
+    name: 'Purple Floral Diwali',
+    imageSource: backgroundImages.purpleFloralDiwali,
+    category: 'vibrant'
+  },
+  {
+    id: 'loveHeartBalloons',
+    name: 'Love Heart Balloons',
+    imageSource: backgroundImages.loveHeartBalloons,
+    category: 'vibrant'
+  },
+  {
+    id: 'fondoAzulCumple',
+    name: 'Blue Birthday Invite',
+    imageSource: backgroundImages.fondoAzulCumple,
+    category: 'vibrant'
+  },
+  {
+    id: 'greenYellowBlueRetro',
+    name: 'Retro Cartoon Party',
+    imageSource: backgroundImages.greenYellowBlueRetro,
+    category: 'vibrant'
+  },
+  {
+    id: 'blueOrangeGreenCelebration',
+    name: 'Playful Celebration',
+    imageSource: backgroundImages.blueOrangeGreenCelebration,
+    category: 'vibrant'
+  },
+  {
+    id: 'birthdayInvitation1',
+    name: 'Birthday Invitation 1',
+    imageSource: backgroundImages.birthdayInvitation1,
+    category: 'vibrant'
+  },
+  {
+    id: 'birthdayInvitation2',
+    name: 'Birthday Invitation 2',
+    imageSource: backgroundImages.birthdayInvitation2,
+    category: 'vibrant'
+  },
+  {
+    id: 'happyBirthday',
+    name: 'Happy Birthday',
+    imageSource: backgroundImages.happyBirthday,
     category: 'vibrant'
   },
 

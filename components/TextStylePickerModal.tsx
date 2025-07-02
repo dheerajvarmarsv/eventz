@@ -1136,7 +1136,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: verticalScale(getResponsiveSpacing(16)),
-    paddingBottom: verticalScale(getResponsiveSpacing(20)),
+    paddingBottom: verticalScale(getResponsiveSpacing(120)), // extra bottom space so the colour‑picker section is fully scrollable on all devices
   },
 
   // Preview - Responsive
