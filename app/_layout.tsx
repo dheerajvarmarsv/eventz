@@ -66,6 +66,23 @@ export default function RootLayout() {
             gestureEnabled: true,
           }} 
         />
+        <Stack.Screen 
+          name="share-invite" 
+          options={{ 
+            headerShown: false,
+            gestureEnabled: true,
+            presentation: 'card',
+            animation: 'slide_from_right',
+          }} 
+        />
+        <Stack.Screen 
+          name="creating-event"
+          options={{
+            headerShown: false,
+            presentation: 'transparentModal',
+            animation: 'fade',
+          }}
+        />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="light" translucent backgroundColor="transparent" />

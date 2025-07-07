@@ -223,7 +223,7 @@ export function DateTimePickerModal({
   currentEndTime,
 }: DateTimePickerModalProps) {
   const { theme } = useTheme();
-
+  
   // State management
   const [isAllDay, setIsAllDay] = useState<boolean>(false);
   const [includeEndTime, setIncludeEndTime] = useState<boolean>(false);
@@ -346,10 +346,10 @@ export function DateTimePickerModal({
   const formatDate = useCallback((date: Date): string => {
     const validDate = isValidDate(date) ? date : new Date();
     return validDate.toLocaleDateString('en-US', {
-      day: 'numeric',
+        day: 'numeric',
       month: 'short',
       year: 'numeric'
-    });
+      });
   }, []);
 
   const formatTime = useCallback((time: Date): string => {
@@ -379,15 +379,15 @@ export function DateTimePickerModal({
     try {
       const validSelectedDate = isValidDate(selectedDate) ? selectedDate : new Date();
 
-      if (isAllDay) {
+    if (isAllDay) {
         const endDateToPass = includeEndTime && isValidDate(endDate) ? endDate : undefined;
         onSelect(validSelectedDate, undefined, endDateToPass);
-      } else {
+    } else {
         const validStartTime = createTimeFromDropdowns(startHour, startMinute, startPeriod, validSelectedDate);
         const endTimeToPass = includeEndTime ? createTimeFromDropdowns(endHour, endMinute, endPeriod, endDate) : undefined;
         onSelect(validSelectedDate, validStartTime, endTimeToPass);
-      }
-      onClose();
+    }
+    onClose();
     } catch (error) {
       console.error('Error in handleDone:', error);
       onClose();
@@ -457,14 +457,14 @@ export function DateTimePickerModal({
     
     if (selectedDate && isValidDate(selectedDate)) {
       setSelectedDate(new Date(selectedDate));
-    }
+      }
   }, [hidePicker]);
 
   const onEndDateChange = useCallback((event: any, selectedEndDate?: Date) => {
     if (Platform.OS === 'android' && event?.type === 'dismissed') {
       hidePicker();
       return;
-    }
+      }
     
     if (Platform.OS === 'android' && event?.type === 'set') {
       hidePicker();
@@ -514,7 +514,7 @@ export function DateTimePickerModal({
     setEndPeriod(newPeriod);
     
     const newEndTime = createTimeFromDropdowns(newHour, newMinute, newPeriod, endDate);
-    setEndTime(newEndTime);
+      setEndTime(newEndTime);
   }, [endHour, endMinute, endPeriod, createTimeFromDropdowns, endDate]);
 
   // Toggle handlers
@@ -543,17 +543,17 @@ export function DateTimePickerModal({
       const onChange = activePickerType === 'date' ? onDateChange : onEndDateChange;
       const title = activePickerType === 'date' ? 'Select Date' : 'Select End Date';
 
-      return (
-        <>
-          {/* Backdrop */}
+    return (
+      <>
+        {/* Backdrop */}
           <Animated.View
             style={[styles.pickerBackdrop, { opacity: backdropOpacity }]}
             pointerEvents="auto"
           >
-            <Pressable style={styles.backdropPress} onPress={hidePicker} />
-          </Animated.View>
+          <Pressable style={styles.backdropPress} onPress={hidePicker} />
+        </Animated.View>
 
-          {/* Picker Container */}
+        {/* Picker Container */}
           <Animated.View
             style={[
               styles.pickerContainer,
@@ -570,26 +570,26 @@ export function DateTimePickerModal({
                 style={styles.pickerButton}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={[styles.pickerButtonText, { color: theme.primary }]}>
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-
+              <Text style={[styles.pickerButtonText, { color: theme.primary }]}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+            
               <Text style={[styles.pickerTitle, { color: theme.isDark ? '#FFFFFF' : '#000000' }]} numberOfLines={1}>
                 {title}
-              </Text>
-
+            </Text>
+            
               <TouchableOpacity 
                 onPress={handlePickerDone} 
                 style={styles.pickerButton}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={[styles.pickerButtonText, { color: theme.primary }]}>
-                  Done
-                </Text>
-              </TouchableOpacity>
-            </View>
-
+              <Text style={[styles.pickerButtonText, { color: theme.primary }]}>
+                Done
+              </Text>
+            </TouchableOpacity>
+          </View>
+          
             {/* Date Picker Content */}
             <View style={[
               styles.pickerContent, 
@@ -599,14 +599,14 @@ export function DateTimePickerModal({
                 paddingHorizontal: getPickerContentSpacing().margin,
               }
             ]}>
-              <DateTimePicker
-                value={currentValue}
+            <DateTimePicker
+              value={currentValue}
                 mode="date"
                 display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
-                onChange={onChange}
+              onChange={onChange}
                 textColor={theme.isDark ? '#FFFFFF' : '#000000'}
-                accentColor={theme.primary}
-                themeVariant={theme.isDark ? 'dark' : 'light'}
+              accentColor={theme.primary}
+              themeVariant={theme.isDark ? 'dark' : 'light'}
                 style={[
                   styles.dateTimePicker,
                   {
@@ -618,11 +618,11 @@ export function DateTimePickerModal({
                 minimumDate={new Date(2020, 0, 1)}
                 maximumDate={new Date(2050, 11, 31)}
                 locale="en-US"
-              />
-            </View>
-          </Animated.View>
-        </>
-      );
+            />
+          </View>
+        </Animated.View>
+      </>
+    );
     }
 
     // Time picker (for startTime and endTime)
@@ -825,23 +825,23 @@ export function DateTimePickerModal({
               overScrollMode={Platform.OS === 'android' ? 'never' : 'auto'}
               contentContainerStyle={styles.scrollContent}
             >
-              {/* Toggle Options */}
-              <View style={[styles.optionsContainer, { backgroundColor: theme.surface }]}>
-                {/* All-day Toggle */}
-                <View style={styles.optionRow}>
+            {/* Toggle Options */}
+            <View style={[styles.optionsContainer, { backgroundColor: theme.surface }]}>
+              {/* All-day Toggle */}
+              <View style={styles.optionRow}>
                   <Text style={[styles.optionLabel, { color: theme.text }]} numberOfLines={1}>
-                    All-day
-                  </Text>
-                  <Switch
-                    value={isAllDay}
-                    onValueChange={handleAllDayToggle}
-                    trackColor={{ false: theme.border, true: theme.primary }}
-                    thumbColor={Platform.OS === 'ios' ? undefined : '#FFFFFF'}
-                    ios_backgroundColor={theme.border}
-                  />
-                </View>
+                  All-day
+                </Text>
+                <Switch
+                  value={isAllDay}
+                  onValueChange={handleAllDayToggle}
+                  trackColor={{ false: theme.border, true: theme.primary }}
+                  thumbColor={Platform.OS === 'ios' ? undefined : '#FFFFFF'}
+                  ios_backgroundColor={theme.border}
+                />
+              </View>
 
-                {/* Include End Time Toggle */}
+              {/* Include End Time Toggle */}
                 <View style={[styles.optionRow, styles.optionRowBorder, { borderTopColor: theme.border }]}>
                   <Text style={[styles.optionLabel, { color: theme.text }]} numberOfLines={1}>
                     Include End Time
@@ -854,28 +854,28 @@ export function DateTimePickerModal({
                     ios_backgroundColor={theme.border}
                   />
                 </View>
-              </View>
+            </View>
 
-              {/* Date and Time Selectors */}
-              <View style={[styles.selectorsContainer, { backgroundColor: theme.surface }]}>
-                {/* Starts Row */}
+            {/* Date and Time Selectors */}
+            <View style={[styles.selectorsContainer, { backgroundColor: theme.surface }]}>
+              {/* Starts Row */}
                 <View style={styles.selectorRow}>
                   <Text style={[styles.selectorLabel, { color: theme.text }]} numberOfLines={1}>
                     Starts
                   </Text>
                   <View style={styles.selectorValues}>
-                    <TouchableOpacity 
+              <TouchableOpacity 
                       onPress={() => showPickerWithAnimation('date')}
                       style={[styles.selectorButton, { backgroundColor: theme.background }]}
-                      activeOpacity={0.7}
+                activeOpacity={0.7}
                       hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                    >
+              >
                       <Text style={[styles.selectorText, { color: theme.primary }]} numberOfLines={1}>
                         {formatDate(selectedDate)}
-                      </Text>
+                </Text>
                     </TouchableOpacity>
-                    
-                    {!isAllDay && (
+                  
+                  {!isAllDay && (
                       <TouchableOpacity 
                         onPress={() => showPickerWithAnimation('startTime')}
                         style={[styles.selectorButton, { backgroundColor: theme.background }]}
@@ -883,29 +883,29 @@ export function DateTimePickerModal({
                         hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
                       >
                         <Text style={[styles.selectorText, { color: theme.primary }]} numberOfLines={1}>
-                          {formatTime(startTime)}
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
+                        {formatTime(startTime)}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
                 </View>
 
-                {/* Ends Row */}
+              {/* Ends Row */}
                 {includeEndTime && (
                   <View style={[styles.selectorRow, styles.selectorRowBorder, { borderTopColor: theme.border }]}>
                     <Text style={[styles.selectorLabel, { color: theme.text }]} numberOfLines={1}>
                       Ends
                     </Text>
                     <View style={styles.selectorValues}>
-                      <TouchableOpacity 
+                <TouchableOpacity 
                         onPress={() => showPickerWithAnimation('endDate')}
                         style={[styles.selectorButton, { backgroundColor: theme.background }]}
-                        activeOpacity={0.7}
+                  activeOpacity={0.7}
                         hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                      >
+                >
                         <Text style={[styles.selectorText, { color: theme.primary }]} numberOfLines={1}>
                           {formatDate(endDate)}
-                        </Text>
+                  </Text>
                       </TouchableOpacity>
                       
                       {!isAllDay && (
@@ -916,26 +916,26 @@ export function DateTimePickerModal({
                           hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
                         >
                           <Text style={[styles.selectorText, { color: theme.primary }]} numberOfLines={1}>
-                            {formatTime(endTime)}
-                          </Text>
-                        </TouchableOpacity>
+                      {formatTime(endTime)}
+                    </Text>
+                </TouchableOpacity>
                       )}
                     </View>
                   </View>
-                )}
+              )}
 
-                {/* No End Time Row */}
+              {/* No End Time Row */}
                 {!includeEndTime && (
-                  <View style={[styles.selectorRow, styles.selectorRowBorder, { borderTopColor: theme.border }]}>
+                <View style={[styles.selectorRow, styles.selectorRowBorder, { borderTopColor: theme.border }]}>
                     <Text style={[styles.selectorLabel, { color: theme.text }]} numberOfLines={1}>
-                      Ends
-                    </Text>
+                    Ends
+                  </Text>
                     <Text style={[styles.noEndTimeText, { color: theme.textSecondary }]} numberOfLines={1}>
-                      None
-                    </Text>
-                  </View>
-                )}
-              </View>
+                    None
+                  </Text>
+                </View>
+              )}
+            </View>
             </ScrollView>
           </Animated.View>
         </SafeAreaView>

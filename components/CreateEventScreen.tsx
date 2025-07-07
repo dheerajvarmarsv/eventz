@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import type { TextStyle as RNTextStyle } from 'react-native';
 import {
   View,
   Text,
@@ -50,6 +51,7 @@ import { BackgroundPickerModal } from './BackgroundPickerModal';
 import { ColorPicker } from './ColorPicker';
 import { TextStylePickerModal } from './TextStylePickerModal';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useRouter } from 'expo-router';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -58,7 +60,7 @@ interface TextStyle {
   color: string;
   fontSize: number;
   fontFamily: string;
-  fontWeight: '300' | '400' | '500' | '600' | '700' | '800' | '900';
+  fontWeight: RNTextStyle['fontWeight'];
   textAlign: 'left' | 'center' | 'right';
   fontStyle: 'normal' | 'italic';
   textDecorationLine: 'none' | 'underline' | 'line-through' | 'underline line-through';
@@ -372,6 +374,7 @@ const getBackgroundImageSource = (backgroundId: string | null) => {
 
 export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEventScreenProps) {
   const { theme, isDark } = useTheme();
+  const router = useRouter();
   
   // Event data state
   const [eventData, setEventData] = useState<EventData>({
@@ -465,6 +468,29 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
   const handleBackgroundPress = () => setShowBackgroundPicker(true);
   const handleTitlePress = () => setShowTitleInput(true);
   const handlePreviewPress = () => setShowInvitationPreview(true);
+  const handleFinalizeEvent = () => {
+    console.log('🚀 handleFinalizeEvent called');
+    
+    if (!eventData.title.trim()) {
+      Alert.alert('Missing Information', 'Please add an event name before proceeding.', [{ text: 'OK' }]);
+      return;
+    }
+    
+    if (!eventData.hostName.trim()) {
+      Alert.alert('Missing Information', 'Please add a host name before proceeding.', [{ text: 'OK' }]);
+      return;
+    }
+    
+    console.log('✅ Validation passed, navigating to loading screen.');
+    
+    // Navigate to the loading screen without closing the current modal
+    router.push({
+      pathname: '/creating-event',
+      params: {
+        eventData: JSON.stringify(eventData),
+      },
+    });
+  };
 
   const handleTitleSave = (title: string) => {
     setEventData(prev => ({ ...prev, title }));
@@ -546,23 +572,22 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
         titleStyle: {
           ...prev.titleStyle,
           fontFamily: newFontFamily,
-          fontWeight: newWeight as '300' | '400' | '500' | '600' | '700' | '800' | '900'
+          fontWeight: newWeight
         }
-      };
+      } as EventData;
     });
     setShowFontFamilyDropdown(false);
   };
 
   // Helper to change font weight while preserving font family and other styling
-  const handleFontWeightChange = (newFontWeight: '300' | '400' | '500' | '600' | '700' | '800' | '900') => {
+  const handleFontWeightChange = (newFontWeight: RNTextStyle['fontWeight']) => {
     setEventData(prev => ({
       ...prev,
       titleStyle: {
         ...prev.titleStyle,
         fontWeight: newFontWeight
-        // Keep existing fontFamily, fontStyle, etc.
       }
-    }));
+    }) as EventData);
     setShowFontWeightDropdown(false);
   };
 
@@ -606,7 +631,10 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
             <BlurView intensity={80} tint="dark" style={styles.previewButtonBlur} />
             <ArrowLeft size={getResponsiveSize(18, 20, 22, 24, 26)} color="white" strokeWidth={2} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.previewNextButton}>
+          <TouchableOpacity 
+            style={styles.previewNextButton}
+            onPress={handleFinalizeEvent}
+          >
             <BlurView intensity={60} tint="dark" style={styles.previewNextButtonBlur} />
             <Text style={styles.previewNextButtonText}>Next</Text>
           </TouchableOpacity>
@@ -622,7 +650,7 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
                 color: eventData.title ? eventData.titleStyle.color : '#FFFFFF',
                 fontSize: moderateScale(Math.min(eventData.titleStyle.fontSize * 1.1, 35)),
                 fontFamily: eventData.titleStyle.fontFamily,
-                fontWeight: eventData.titleStyle.fontWeight,
+                fontWeight: eventData.titleStyle.fontWeight as any,
                 textAlign: eventData.titleStyle.textAlign,
                 fontStyle: eventData.titleStyle.fontStyle,
                 textDecorationLine: eventData.titleStyle.textDecorationLine,
@@ -634,9 +662,11 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
           </View>
 
           {/* Date & Time */}
-          <Text style={styles.previewSubtitle}>
-            {formatDateTime()}
-          </Text>
+          {(eventData.date || eventData.time) && (
+            <Text style={styles.previewSubtitle}>
+              {formatDateTime()}
+            </Text>
+          )}
 
           {/* Location Name */}
           {eventData.locationName && (
@@ -821,7 +851,7 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
                         color: eventData.title ? eventData.titleStyle.color : 'rgba(255,255,255,0.7)',
                         fontSize: moderateScale(Math.min(eventData.titleStyle.fontSize, 32)),
                         fontFamily: eventData.titleStyle.fontFamily,
-                        fontWeight: eventData.titleStyle.fontWeight,
+                        fontWeight: eventData.titleStyle.fontWeight as any,
                         textAlign: eventData.titleStyle.textAlign,
                         fontStyle: eventData.titleStyle.fontStyle,
                         textDecorationLine: eventData.titleStyle.textDecorationLine,
@@ -982,7 +1012,7 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
                         color: eventData.titleStyle.color,
                         fontSize: moderateScale(Math.min(eventData.titleStyle.fontSize, 18)),
                         fontFamily: eventData.titleStyle.fontFamily,
-                        fontWeight: eventData.titleStyle.fontWeight,
+                        fontWeight: eventData.titleStyle.fontWeight as any,
                         textAlign: eventData.titleStyle.textAlign,
                         fontStyle: eventData.titleStyle.fontStyle,
                         textDecorationLine: eventData.titleStyle.textDecorationLine,
@@ -1010,7 +1040,7 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
                         color: eventData.titleStyle.color,
                         fontSize: moderateScale(Math.min(eventData.titleStyle.fontSize, 32)),
                         fontFamily: eventData.titleStyle.fontFamily,
-                        fontWeight: eventData.titleStyle.fontWeight,
+                        fontWeight: eventData.titleStyle.fontWeight as any,
                         textAlign: eventData.titleStyle.textAlign,
                         fontStyle: eventData.titleStyle.fontStyle,
                         textDecorationLine: eventData.titleStyle.textDecorationLine,
@@ -1353,7 +1383,7 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
                           }}
                         >
                           <Text style={styles.cleanDropdownText}>
-                            {getWeightLabel(eventData.titleStyle.fontFamily, eventData.titleStyle.fontWeight)}
+                            {getWeightLabel(eventData.titleStyle.fontFamily, (eventData.titleStyle.fontWeight || '').toString())}
                           </Text>
                           <ChevronDown 
                             size={getResponsiveSize(14, 16, 18, 20, 22)} 
@@ -1375,7 +1405,7 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
                                   styles.cleanDropdownOption,
                                   eventData.titleStyle.fontWeight === weight && styles.cleanDropdownOptionActive
                                 ]}
-                                onPress={() => handleFontWeightChange(weight as '300' | '400' | '500' | '600' | '700' | '800' | '900')}
+                                onPress={() => handleFontWeightChange(weight as RNTextStyle['fontWeight'])}
                               >
                                 <Text style={[
                                   styles.cleanDropdownOptionText,
@@ -1591,7 +1621,7 @@ export function CreateEventScreen({ visible, onClose, onEventCreated }: CreateEv
             color: eventData.titleStyle.color,
             fontSize: eventData.titleStyle.fontSize,
             fontFamily: eventData.titleStyle.fontFamily,
-            fontWeight: eventData.titleStyle.fontWeight,
+            fontWeight: eventData.titleStyle.fontWeight as any,
             textAlign: eventData.titleStyle.textAlign,
             fontStyle: eventData.titleStyle.fontStyle,
             textDecorationLine: eventData.titleStyle.textDecorationLine,
@@ -2109,14 +2139,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     minHeight: getResponsiveSize(44, 48, 52, 56, 60),
     justifyContent: 'center',
-  },
-  previewButtonBlur: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: getResponsiveSize(22, 24, 26, 28, 30),
   },
   previewNextButtonBlur: {
     position: 'absolute',

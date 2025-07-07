@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'expo-router';
 import {
   View,
   Text,
@@ -7,21 +8,39 @@ import {
   TouchableOpacity,
   Platform,
   Alert,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, Calendar, MapPin, Users, Star, Share2 } from 'lucide-react-native';
+import { Plus, Calendar, Users, Star, Share2 } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { EventCard } from '@/components/EventCard';
 import { CreateEventScreen } from '@/components/CreateEventScreen';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useFocusEffect } from '@react-navigation/native';
+
+interface Event {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  location: string;
+  attendees: number;
+  photos: number;
+  status: 'active' | 'upcoming' | 'completed';
+  image?: string;
+}
 
 export default function EventsScreen() {
   const { theme } = useTheme();
+  const router = useRouter();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [events, setEvents] = useState([
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
+  const defaultEvents: Event[] = [
     {
       id: '1',
-      title: 'Sarah\'s Birthday Party',
+      title: "Sarah's Birthday Party",
       date: 'Sat, 25 January 2025',
       time: '7:00 PM',
       location: 'Central Park Pavilion, 830 5th Ave, New York, NY 10065',
@@ -41,7 +60,58 @@ export default function EventsScreen() {
       status: 'upcoming' as const,
       image: 'https://images.pexels.com/photos/1181406/pexels-photo-1181406.jpeg',
     },
-  ]);
+  ];
+
+  const [events, setEvents] = useState<Event[]>([]);
+  const isInitialLoad = useRef(true);
+  const isNavigating = useRef(false);
+
+  // Load events when screen comes into focus (including on app start)
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadEvents = async () => {
+        try {
+          const stored = await AsyncStorage.getItem('@events');
+          if (stored) {
+            setEvents(JSON.parse(stored));
+          } else {
+            // Preload default demo events for first-time users
+            setEvents(defaultEvents);
+          }
+        } catch (err) {
+          console.error('[EventsScreen] Failed to load events from storage', err);
+          setEvents(defaultEvents);
+        }
+      };
+      
+      loadEvents();
+    }, [])
+  );
+
+  // Persist events whenever they change, but skip the very first load.
+  useEffect(() => {
+    // If it's the initial render and events are still empty, do nothing.
+    // When useFocusEffect loads events, this will run again.
+    if (isInitialLoad.current && events.length === 0) {
+      return;
+    }
+    
+    // If it's the initial load (from focus effect), just mark it as complete and don't save.
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      return;
+    }
+
+    // For all subsequent changes (e.g., deletions), save to storage.
+    (async () => {
+      try {
+        await AsyncStorage.setItem('@events', JSON.stringify(events));
+        console.log('✅ Events updated in storage.');
+      } catch (err) {
+        console.error('[EventsScreen] Failed to save events to storage', err);
+      }
+    })();
+  }, [events]);
 
   const stats = [
     { icon: Calendar, label: 'Events Hosted', value: events.length.toString() },
@@ -50,25 +120,9 @@ export default function EventsScreen() {
   ];
 
   const handleCreateEvent = (eventData: any) => {
-    const newEvent = {
-      id: Date.now().toString(),
-      ...eventData,
-      attendees: 0,
-      photos: 0,
-      status: 'upcoming' as const,
-    };
-    
-    setEvents(prev => [newEvent, ...prev]);
+    // Event creation now happens in ShareInviteScreen
+    // Just close the modal here
     setShowCreateModal(false);
-    
-    // Show success message
-    if (Platform.OS !== 'web') {
-      Alert.alert(
-        'Event Created!',
-        `${eventData.title} has been created successfully. You can now share it with your guests.`,
-        [{ text: 'OK' }]
-      );
-    }
   };
 
   const handleShareEvent = (event: any) => {
@@ -86,6 +140,62 @@ export default function EventsScreen() {
         ]
       );
     }
+  };
+
+  const handleDeleteEvent = (event: Event) => {
+    setEventToDelete(event);
+    setShowDeleteModal(true);
+  };
+
+  const handleOpenEvent = (event: any) => {
+    if (isNavigating.current) return; // throttle
+    isNavigating.current = true;
+    try {
+      router.push({ pathname: '/share-invite', params: { event: JSON.stringify(event) } } as any);
+    } catch (err) {
+      console.error('Failed to navigate to share screen', err);
+    } finally {
+      // Reset flag after navigation stack settles
+      setTimeout(() => { isNavigating.current = false; }, 800);
+    }
+  };
+
+  const confirmDeleteEvent = async () => {
+    if (!eventToDelete) return;
+    
+    try {
+      // Remove from events array
+      const updatedEvents = events.filter(event => event.id !== eventToDelete.id);
+      setEvents(updatedEvents);
+      
+      // Save to storage
+      await AsyncStorage.setItem('@events', JSON.stringify(updatedEvents));
+      
+      // Close modal and reset state
+      setShowDeleteModal(false);
+      setEventToDelete(null);
+      
+      // Show success message
+      if (Platform.OS !== 'web') {
+        Alert.alert(
+          'Event Deleted',
+          `${eventToDelete.title} has been deleted successfully.`,
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      Alert.alert(
+        'Error',
+        'Failed to delete event. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  const cancelDeleteEvent = () => {
+    setShowDeleteModal(false);
+    setEventToDelete(null);
   };
 
   return (
@@ -148,7 +258,10 @@ export default function EventsScreen() {
               key={event.id} 
               event={event} 
               theme={theme}
+              onPress={() => handleOpenEvent(event)}
               onShare={() => handleShareEvent(event)}
+              onDelete={() => handleDeleteEvent(event)}
+              onLongPress={() => handleDeleteEvent(event)}
             />
           ))}
         </View>
@@ -180,6 +293,45 @@ export default function EventsScreen() {
         onClose={() => setShowCreateModal(false)}
         onEventCreated={handleCreateEvent}
       />
+      
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={showDeleteModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={cancelDeleteEvent}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.deleteModal, { backgroundColor: theme.surface }]}>
+            <Text style={[styles.deleteModalTitle, { color: theme.text }]}>
+              Delete Event
+            </Text>
+            <Text style={[styles.deleteModalMessage, { color: theme.textSecondary }]}>
+              Are you sure you want to delete "{eventToDelete?.title}"? This action cannot be undone.
+            </Text>
+            
+            <View style={styles.deleteModalButtons}>
+              <TouchableOpacity
+                style={[styles.cancelButton, { borderColor: theme.border }]}
+                onPress={cancelDeleteEvent}
+              >
+                <Text style={[styles.cancelButtonText, { color: theme.text }]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.deleteButton, { backgroundColor: theme.error || '#FF4444' }]}
+                onPress={confirmDeleteEvent}
+              >
+                <Text style={styles.deleteButtonText}>
+                  Delete
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -314,6 +466,69 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   createFirstButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  deleteModal: {
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+      },
+      android: {
+        elevation: 10,
+      },
+    }),
+  },
+  deleteModalTitle: {
+    fontSize: 20,
+    fontFamily: 'Inter-Bold',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  deleteModalMessage: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    lineHeight: 22,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  deleteModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+  },
+  deleteButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  deleteButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',

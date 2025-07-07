@@ -193,7 +193,7 @@ export function LocationPickerModal({
 
   // Refs
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
+  
   // Animation values
   const headerOpacity = useSharedValue(0);
   const contentOpacity = useSharedValue(0);
@@ -266,12 +266,12 @@ export function LocationPickerModal({
       const { status } = await Location.requestForegroundPermissionsAsync();
       
       if (status !== 'granted') {
-        Alert.alert(
+      Alert.alert(
           'Permission Required',
           'Location permission is required to get your current location. Please enable it in your device settings.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { 
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
               text: 'Settings', 
               onPress: () => {
                 // Open device settings for location permissions
@@ -401,17 +401,17 @@ export function LocationPickerModal({
             <View style={[styles.searchContainer, { backgroundColor: theme.surface }]}>
               <View style={[styles.searchInputContainer, { borderColor: theme.border }]}>
                 <Search size={scale(18)} color={theme.textSecondary} strokeWidth={2} />
-                <TextInput
+                  <TextInput
                   style={[styles.searchInput, { color: theme.text }]}
                   placeholder="Search for places..."
                   placeholderTextColor={theme.textSecondary}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
                   autoCapitalize="words"
-                  returnKeyType="search"
+                    returnKeyType="search"
                   clearButtonMode="while-editing"
                   onSubmitEditing={() => handleSearch(searchQuery)}
-                />
+                  />
                 {loadingState === 'searching' && (
                   <LoadingIndicator size={scale(16)} />
                 )}
@@ -419,7 +419,7 @@ export function LocationPickerModal({
             </View>
 
             {/* Current Location Button */}
-            <TouchableOpacity
+                <TouchableOpacity 
               style={[styles.currentLocationButton, { backgroundColor: theme.surface }]}
               onPress={getCurrentLocation}
               disabled={loadingState === 'gettingLocation'}
@@ -430,7 +430,7 @@ export function LocationPickerModal({
                 ) : (
                   <Navigation size={scale(18)} color={theme.primary} strokeWidth={2} />
                 )}
-              </View>
+                    </View>
               <View style={styles.locationInfo}>
                 <Text style={[styles.locationName, { color: theme.text }]}>
                   Use Current Location
@@ -456,11 +456,11 @@ export function LocationPickerModal({
                   {searchResults.map((location) => {
                     const IconComponent = getLocationIcon(location.types);
                     return (
-                      <TouchableOpacity
+                    <TouchableOpacity
                         key={location.id}
                         style={[styles.locationItem, { backgroundColor: theme.surface }]}
                         onPress={() => handleLocationSelect(location)}
-                      >
+                    >
                         <View style={[styles.locationIcon, { backgroundColor: `${theme.primary}20` }]}>
                           <IconComponent size={scale(18)} color={theme.primary} strokeWidth={2} />
                         </View>
@@ -471,8 +471,8 @@ export function LocationPickerModal({
                           <Text style={[styles.locationAddress, { color: theme.textSecondary }]} numberOfLines={2}>
                             {location.address}
                           </Text>
-                        </View>
-                      </TouchableOpacity>
+                      </View>
+                    </TouchableOpacity>
                     );
                   })}
                 </View>
@@ -517,8 +517,8 @@ export function LocationPickerModal({
                   </Text>
                   <Text style={[styles.noResultsSubtext, { color: theme.textSecondary }]}>
                     Try a different search term or use your current location
-                  </Text>
-                </View>
+                </Text>
+              </View>
               )}
 
               {/* Error State */}
@@ -584,7 +584,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: verticalScale(getResponsiveSpacing(16)),
   },
-
+  
   // Search Container - Responsive
   searchContainer: {
     marginHorizontal: scale(getResponsiveSpacing(16)),

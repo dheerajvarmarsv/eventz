@@ -6,8 +6,16 @@ import {
   TouchableOpacity,
   Image,
   Platform,
+  Animated,
+  PanResponder,
+  Dimensions,
+  ImageBackground,
 } from 'react-native';
-import { Calendar, MapPin, Users, Image as ImageIcon, Share2, QrCode } from 'lucide-react-native';
+import { Calendar, MapPin, Users, Image as ImageIcon, Share2, QrCode, Trash2 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25;
 
 interface Event {
   id: string;
@@ -19,15 +27,58 @@ interface Event {
   photos: number;
   status: 'active' | 'upcoming' | 'completed';
   image?: string;
+  backgroundImage?: string;
 }
 
 interface EventCardProps {
   event: Event;
   theme: any;
   onShare?: () => void;
+  onDelete?: () => void;
+  onLongPress?: () => void;
+  onPress?: () => void;
 }
 
-export function EventCard({ event, theme, onShare }: EventCardProps) {
+export function EventCard({ event, theme, onShare, onDelete, onLongPress, onPress }: EventCardProps) {
+  const translateX = React.useRef(new Animated.Value(0)).current;
+  const [isSwipeActive, setIsSwipeActive] = React.useState(false);
+
+  const panResponder = React.useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dy) < 80;
+      },
+      onPanResponderGrant: () => {
+        setIsSwipeActive(true);
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        if (gestureState.dx > 0) {
+          translateX.setValue(Math.min(gestureState.dx, SWIPE_THRESHOLD * 1.2));
+        }
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dx > SWIPE_THRESHOLD) {
+          // Trigger delete
+          Animated.timing(translateX, {
+            toValue: SCREEN_WIDTH,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => {
+            onDelete?.();
+          });
+        } else {
+          // Snap back
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start(() => {
+            setIsSwipeActive(false);
+          });
+        }
+      },
+    })
+  ).current;
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
@@ -54,13 +105,87 @@ export function EventCard({ event, theme, onShare }: EventCardProps) {
     }
   };
 
+  const deleteButtonScale = translateX.interpolate({
+    inputRange: [0, SWIPE_THRESHOLD],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  // Map background image id to actual require source (keep in sync with BackgroundPickerModal)
+  const backgroundImages: { [key: string]: any } = {
+    blackGreenWatercolor: require('@/assets/images/invites/_Black and Green Watercolor Phone Wallpaper.png'),
+    beigeGoldMinimalist: require('@/assets/images/invites/Beige Gold Aesthetic Minimalist Phone Wallpaper.png'),
+    beigePinkFlowers: require('@/assets/images/invites/Beige Pink Illustrated Flowers and Leaves Phone Wallpaper .png'),
+    blackGoldBrush: require('@/assets/images/invites/Black and Gold Glitter Brush Stroke Phone Wallpaper.png'),
+    blackGoldDrops: require('@/assets/images/invites/Black and Gold Glitter Drops Phone Wallpaper.png'),
+    blackGoldGlossy: require('@/assets/images/invites/Black and Gold Glossy Phone Wallpaper.png'),
+    blackWhiteStarry: require('@/assets/images/invites/Black And White Illustrated Starry Sky Phone Wallpaper.png'),
+    blackBlueGoldLuxury: require('@/assets/images/invites/Black Dark Blue Gold Luxury Phone Wallpaper.png'),
+    yellowWhiteGreenFlower: require('@/assets/images/invites/Yellow White and Green Aesthetic Flower Wallpaper Phone .png'),
+    yellowGreenNature: require('@/assets/images/invites/Yellow and Green Watercolor Illustration Nature View Phone Wallpaper.png'),
+    default: require('@/assets/images/invites/default.png'),
+    dustyBlueFloral: require('@/assets/images/invites/Dusty Blue Cream Motivational Floral Vintage Phone Wallpaper.png'),
+    creamPinkBows: require('@/assets/images/invites/Cream and Pink Watercolor Gentle Illustrative Bows Background Wallpaper Phone Wallpaper.png'),
+    creamGreenIllustrative: require('@/assets/images/invites/Cream Green Illustrative Phone Wallpaper.png'),
+    creamVintageStorms: require('@/assets/images/invites/Cream Vintage Art Aesthetic Storms Christian Phone Wallpaper.png'),
+  };
+
+  const getBackgroundImageSource = (backgroundId?: string) => {
+    if (!backgroundId) return null;
+    if (backgroundId.startsWith('background_')) {
+      const key = backgroundId.replace('background_', '');
+      return backgroundImages[key] || null;
+    }
+    if (backgroundId.startsWith('http')) return { uri: backgroundId };
+    return null;
+  };
+
   return (
-    <TouchableOpacity
-      style={[styles.card, { backgroundColor: theme.surface }]}
-    >
-      {event.image && (
-        <Image source={{ uri: event.image }} style={styles.image} />
-      )}
+    <View style={styles.cardContainer}>
+      {/* Delete background */}
+      <View style={[styles.deleteBackground, { backgroundColor: theme.error || '#FF4444' }]}>
+        <Animated.View 
+          style={[
+            styles.deleteButton,
+            {
+              transform: [{ scale: deleteButtonScale }],
+            },
+          ]}
+        >
+          <Trash2 size={20} color="#FFFFFF" />
+          <Text style={styles.deleteText}>Delete</Text>
+        </Animated.View>
+      </View>
+      
+      {/* Main card */}
+      <Animated.View
+        style={[
+          { transform: [{ translateX }] },
+        ]}
+        {...panResponder.panHandlers}
+      >
+        <TouchableOpacity
+          style={[styles.card, { backgroundColor: theme.surface }]}
+          onLongPress={onLongPress}
+          delayLongPress={500}
+          onPress={onPress}
+        >
+      {(() => {
+        const source = getBackgroundImageSource(event.backgroundImage);
+        if (source || event.image) {
+          const imgSource = source || { uri: event.image! };
+          return (
+            <ImageBackground source={imgSource} style={styles.image} imageStyle={styles.imageStyle}>
+              {/* Subtle bottom fade for readability */}
+              <LinearGradient
+                colors={[ 'transparent', 'rgba(0,0,0,0.35)' ]}
+                style={StyleSheet.absoluteFill}
+              />
+            </ImageBackground>
+          );
+        }
+        return null;
+      })()}
       
       <View style={styles.content}>
         <View style={styles.header}>
@@ -135,15 +260,43 @@ export function EventCard({ event, theme, onShare }: EventCardProps) {
           </View>
         </View>
       </View>
-    </TouchableOpacity>
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
+  cardContainer: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  deleteBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingLeft: 20,
     borderRadius: 16,
     marginBottom: 16,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  deleteText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+  },
+  card: {
+    borderRadius: 16,
     overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -158,7 +311,15 @@ const styles = StyleSheet.create({
   },
   image: {
     width: '100%',
-    height: 120,
+    height: 140,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    overflow: 'hidden',
+  },
+  imageStyle: {
+    resizeMode: 'cover',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
   },
   content: {
     padding: 16,
